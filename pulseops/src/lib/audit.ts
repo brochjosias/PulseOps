@@ -1,5 +1,5 @@
 import { randomInt } from 'node:crypto';
-import { prisma, runtime } from './prisma';
+import { dbRuntime, prisma } from './prisma';
 
 function generateId() {
   return randomInt(1, 2_147_483_647);
@@ -27,5 +27,5 @@ export async function audit(params: {
     ])
     .build();
 
-  await runtime.execute(plan);
+  await dbRuntime.execute(plan);
 }

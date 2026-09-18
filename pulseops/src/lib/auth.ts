@@ -3,7 +3,7 @@ import { cookies } from 'next/headers';
 import { createHash, randomInt, randomUUID } from 'node:crypto';
 import bcrypt from 'bcryptjs';
 
-import { prisma, runtime } from './prisma';
+import { dbRuntime, prisma } from './prisma';
 import { type Role } from './rbac';
 
 const ACCESS_COOKIE = 'pulseops_access';
@@ -91,7 +91,7 @@ export async function createRefresh(userId: number) {
     ])
     .build();
 
-  await runtime.execute(plan);
+  await dbRuntime.execute(plan);
 
   return {
     raw,
@@ -99,7 +99,7 @@ export async function createRefresh(userId: number) {
   };
 }
 
-export async function rotateRefresh(userId: number, raw: string) {
+export async function rotateRefresh(raw: string) {
   const hash = hashRefresh(raw);
 
   const selectPlan = prisma.sql.refreshToken
@@ -108,40 +108,33 @@ export async function rotateRefresh(userId: number, raw: string) {
     .limit(1)
     .build();
 
-  const rows = await runtime.query(selectPlan);
-
+  const rows = await dbRuntime.query(selectPlan);
   const stored = rows[0];
 
-  if (
-    !stored ||
-    stored.revokedAt !== null ||
-    stored.expiresAt < new Date() ||
-    stored.userId !== userId
-  ) {
+  // valida sem precisar de userId externo
+  if (!stored || stored.revokedAt != null || new Date(stored.expiresAt) < new Date()) {
     throw new Error('refresh_invalid');
   }
 
   const revokePlan = prisma.sql.refreshToken
-    .update({
-      revokedAt: new Date(),
-    })
+    .update({ revokedAt: new Date() })
     .where((f, fns) => fns.eq(f.id, stored.id))
     .build();
 
-  await runtime.execute(revokePlan);
+  await dbRuntime.execute(revokePlan);
 
-  return createRefresh(userId);
+  const refresh = await createRefresh(stored.userId);
+
+  return { userId: stored.userId, refresh };
 }
 
 export async function revokeAllRefresh(userId: number) {
   const plan = prisma.sql.refreshToken
-    .update({
-      revokedAt: new Date(),
-    })
-    .where((f, fns) => fns.and(fns.eq(f.userId, userId), fns.eq(f.revokedAt, null)))
+    .update({ revokedAt: new Date() })
+    .where((f, fns) => fns.eq(f.userId, userId))
     .build();
 
-  await runtime.execute(plan);
+  await dbRuntime.execute(plan);
 }
 
 // ---------- Cookies ----------
@@ -207,7 +200,7 @@ export async function getSession(): Promise<Session | null> {
       .limit(1)
       .build();
 
-    const users = await runtime.query(userPlan);
+    const users = await dbRuntime.query(userPlan);
     const user = users[0];
 
     if (!user) {
@@ -220,7 +213,7 @@ export async function getSession(): Promise<Session | null> {
       .limit(1)
       .build();
 
-    const memberships = await runtime.query(membershipPlan);
+    const memberships = await dbRuntime.query(membershipPlan);
 
     const membership = memberships[0];
 

@@ -1,5 +1,5 @@
-export async function api<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(path, {
+export async function api<T>(path: string, init?: RequestInit, retry = true): Promise<T> {
+  const response = await fetch(path, {
     ...init,
     credentials: 'include',
     headers: {
@@ -8,22 +8,22 @@ export async function api<T>(path: string, init?: RequestInit): Promise<T> {
     },
   });
 
-  if (res.status === 401 && typeof window !== 'undefined' && !path.includes('/auth/')) {
+  if (response.status === 401 && retry && !path.startsWith('/api/auth/')) {
     const refresh = await fetch('/api/auth/refresh', {
       method: 'POST',
       credentials: 'include',
     });
 
     if (refresh.ok) {
-      return api<T>(path, init);
+      return api<T>(path, init, false);
     }
   }
 
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({}));
+  if (!response.ok) {
+    const body = await response.json().catch(() => ({}));
 
     throw new Error(body.message ?? 'Erro na requisição');
   }
 
-  return res.json();
+  return response.json() as Promise<T>;
 }

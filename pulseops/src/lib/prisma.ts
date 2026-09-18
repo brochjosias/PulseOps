@@ -7,4 +7,4 @@ export const prisma = sqlite<Contract>({
   path: './prisma/dev.db',
 });
 
-export const runtime = prisma.runtime();
+export const dbRuntime = prisma.runtime();
