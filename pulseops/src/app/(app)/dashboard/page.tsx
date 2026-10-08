@@ -4,6 +4,9 @@ import dynamic from 'next/dynamic';
 import { useQuery } from '@tanstack/react-query';
 import { DollarSign, ShoppingCart, TrendingUp, Users } from 'lucide-react';
 
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { PageHeader } from '@/components/layout/page-header';
+import { Skeleton } from '@/components/ui/skeleton';
 import { api } from '@/lib/api-client';
 import { brl } from '@/lib/utils';
 
@@ -43,108 +46,182 @@ export default function DashboardPage() {
     queryFn: () => api<TimeseriesPoint[]>('/api/dashboard/timeseries?days=30'),
   });
 
-  if (overview.isLoading || series.isLoading) {
-    return (
-      <div className="flex min-h-40 items-center justify-center">
-        <p className="text-sm text-slate-500">Carregando dashboard...</p>
-      </div>
-    );
-  }
-
-  if (overview.isError || series.isError || !overview.data) {
-    return (
-      <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-        Não foi possível carregar o dashboard.
-      </div>
-    );
-  }
+  const loading = overview.isLoading || series.isLoading;
+  const error = overview.isError || series.isError || !overview.data;
 
   const data = overview.data;
   const chart = series.data ?? [];
 
-  const kpis = [
-    {
-      label: 'Faturamento',
-      value: brl(data.revenue),
-      change: data.revenueChange,
-      icon: DollarSign,
-    },
-    {
-      label: 'Pedidos',
-      value: data.orders.toLocaleString('pt-BR'),
-      change: data.ordersChange,
-      icon: ShoppingCart,
-    },
-    {
-      label: 'Ticket médio',
-      value: brl(data.avgTicket),
-      icon: TrendingUp,
-    },
-    {
-      label: 'Clientes',
-      value: data.customers.toLocaleString('pt-BR'),
-      icon: Users,
-    },
-  ];
-
   const chartOption = {
+    backgroundColor: 'transparent',
+    grid: { left: 8, right: 8, top: 8, bottom: 24, containLabel: true },
     tooltip: {
       trigger: 'axis',
+      backgroundColor: '#0a0a0a',
+      borderColor: '#27272a',
+      textStyle: { color: '#fafafa', fontSize: 12 },
     },
     xAxis: {
       type: 'category' as const,
-      data: chart.map((item) => item.day),
+      data: chart.map((c) => c.day),
+      axisLine: { lineStyle: { color: '#27272a' } },
+      axisLabel: { color: '#71717a', fontSize: 11 },
+      axisTick: { show: false },
     },
     yAxis: {
       type: 'value' as const,
+      axisLine: { show: false },
+      axisTick: { show: false },
+      splitLine: { lineStyle: { color: '#18181b' } },
+      axisLabel: { color: '#71717a', fontSize: 11 },
     },
     series: [
       {
         type: 'line' as const,
         smooth: true,
-        areaStyle: {},
-        data: chart.map((item) => item.revenue),
+        symbol: 'none',
+        lineStyle: { color: '#3b82f6', width: 2 },
+        areaStyle: {
+          color: {
+            type: 'linear' as const,
+            x: 0,
+            y: 0,
+            x2: 0,
+            y2: 1,
+            colorStops: [
+              { offset: 0, color: 'rgba(59,130,246,0.25)' },
+              { offset: 1, color: 'rgba(59,130,246,0)' },
+            ],
+          },
+        },
+        data: chart.map((c) => c.revenue),
       },
     ],
   };
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold text-slate-900">Dashboard</h1>
+      <PageHeader title="Dashboard" description="Visão geral da operação" />
 
-        <p className="mt-1 text-sm text-slate-500">Visão geral da operação</p>
-      </div>
+      {loading && <DashboardSkeleton />}
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {kpis.map(({ label, value, change, icon: Icon }) => (
-          <div key={label} className="rounded-lg border bg-white p-5">
-            <div className="flex items-center justify-between text-sm text-slate-500">
-              <span>{label}</span>
+      {!loading && error && (
+        <Card className="border-destructive/40 bg-destructive/5">
+          <CardContent className="p-5 text-sm text-destructive">
+            Não foi possível carregar o dashboard.
+          </CardContent>
+        </Card>
+      )}
 
-              <Icon className="h-4 w-4" />
-            </div>
-
-            <div className="mt-2 text-2xl font-semibold text-slate-900">{value}</div>
-
-            {change !== undefined && (
-              <div
-                className={
-                  change >= 0 ? 'mt-1 text-xs text-emerald-600' : 'mt-1 text-xs text-red-600'
-                }
-              >
-                {change >= 0 ? '▲' : '▼'} {Math.abs(change).toFixed(1)}% vs. mês anterior
-              </div>
-            )}
+      {!loading && !error && data && (
+        <>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <KpiCard
+              label="Faturamento"
+              value={brl(data.revenue)}
+              change={data.revenueChange}
+              icon={DollarSign}
+            />
+            <KpiCard
+              label="Pedidos"
+              value={data.orders.toLocaleString('pt-BR')}
+              change={data.ordersChange}
+              icon={ShoppingCart}
+            />
+            <KpiCard label="Ticket médio" value={brl(data.avgTicket)} icon={TrendingUp} />
+            <KpiCard label="Clientes" value={data.customers.toLocaleString('pt-BR')} icon={Users} />
           </div>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-foreground">Faturamento — últimos 30 dias</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ReactECharts style={{ height: 320 }} option={chartOption} />
+            </CardContent>
+          </Card>
+
+          {data.topProducts.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-foreground">Produtos mais vendidos</CardTitle>
+              </CardHeader>
+              <CardContent className="p-0">
+                <div className="divide-y divide-border">
+                  {data.topProducts.map((p) => (
+                    <div key={p.id} className="flex items-center justify-between px-5 py-3 text-sm">
+                      <span className="text-foreground">{p.name}</span>
+                      <div className="flex items-center gap-6 text-xs text-muted-foreground">
+                        <span>{p.quantity} un.</span>
+                        <span className="w-24 text-right font-medium text-foreground">
+                          {brl(p.revenue)}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
+function KpiCard({
+  label,
+  value,
+  change,
+  icon: Icon,
+}: {
+  label: string;
+  value: string;
+  change?: number;
+  icon: React.ComponentType<{ className?: string }>;
+}) {
+  return (
+    <Card>
+      <CardContent className="p-5">
+        <div className="flex items-center justify-between text-xs text-muted-foreground">
+          <span>{label}</span>
+          <Icon className="h-3.5 w-3.5" />
+        </div>
+
+        <div className="mt-3 text-2xl font-semibold tracking-tight text-foreground">{value}</div>
+
+        {change !== undefined && (
+          <div
+            className={change >= 0 ? 'mt-1 text-xs text-success' : 'mt-1 text-xs text-destructive'}
+          >
+            {change >= 0 ? '▲' : '▼'} {Math.abs(change).toFixed(1)}%{' '}
+            <span className="text-muted-foreground">vs. mês anterior</span>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function DashboardSkeleton() {
+  return (
+    <div className="space-y-6">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <Card key={i}>
+            <CardContent className="space-y-3 p-5">
+              <Skeleton className="h-3 w-20" />
+              <Skeleton className="h-7 w-28" />
+              <Skeleton className="h-3 w-24" />
+            </CardContent>
+          </Card>
         ))}
       </div>
-
-      <div className="rounded-lg border bg-white p-5">
-        <h2 className="mb-4 font-medium text-slate-900">Faturamento — últimos 30 dias</h2>
-
-        <ReactECharts style={{ height: 320 }} option={chartOption} />
-      </div>
+      <Card>
+        <CardContent className="p-5">
+          <Skeleton className="h-[320px] w-full" />
+        </CardContent>
+      </Card>
     </div>
   );
 }

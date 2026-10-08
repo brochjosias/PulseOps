@@ -4,10 +4,13 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { toast } from 'sonner';
 
 import { api } from '@/lib/api-client';
-import { Link } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 const schema = z.object({
   email: z.string().email('Informe um e-mail válido'),
@@ -47,61 +50,48 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="min-h-screen bg-slate-50 grid place-items-center px-4">
+    <main className="grid min-h-screen place-items-center bg-background px-4">
       <form
         onSubmit={handleSubmit(onSubmit)}
-        className="w-full max-w-sm space-y-5 rounded-xl border bg-white p-8 shadow-sm"
+        className="w-full max-w-sm space-y-6 rounded-lg border border-border bg-card p-8"
       >
         <div className="space-y-1">
-          <h1 className="text-2xl font-semibold text-slate-900">PulseOps</h1>
-
-          <p className="text-sm text-slate-500">Entre na sua conta</p>
+          <h1 className="text-lg font-semibold text-foreground">PulseOps</h1>
+          <p className="text-sm text-muted-foreground">Entre na sua conta</p>
         </div>
 
         <div className="space-y-2">
-          <label htmlFor="email" className="text-sm font-medium text-slate-700">
-            E-mail
-          </label>
-
-          <input
+          <Label htmlFor="email">E-mail</Label>
+          <Input
             id="email"
             type="email"
             autoComplete="email"
             placeholder="voce@empresa.com"
             {...register('email')}
-            className="w-full rounded-md border px-3 py-2 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
           />
-
-          {errors.email && <p className="text-xs text-red-600">{errors.email.message}</p>}
+          {errors.email && <p className="text-xs text-destructive">{errors.email.message}</p>}
         </div>
 
         <div className="space-y-2">
-          <label htmlFor="password" className="text-sm font-medium text-slate-700">
-            Senha
-          </label>
-
-          <input
+          <Label htmlFor="password">Senha</Label>
+          <Input
             id="password"
             type="password"
             autoComplete="current-password"
             placeholder="••••••••"
             {...register('password')}
-            className="w-full rounded-md border px-3 py-2 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
           />
-
-          {errors.password && <p className="text-xs text-red-600">{errors.password.message}</p>}
+          {errors.password && <p className="text-xs text-destructive">{errors.password.message}</p>}
         </div>
 
-        <button
-          type="submit"
-          disabled={isSubmitting}
-          className="w-full rounded-md bg-blue-600 py-2.5 text-sm font-medium text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
-        >
+        {/* ⬇️ ÚNICA mudança: adicionado size="lg" */}
+        <Button type="submit" disabled={isSubmitting} size="lg" className="w-full">
           {isSubmitting ? 'Entrando...' : 'Entrar'}
-        </button>
-        <p className="text-center text-xs text-slate-500">
+        </Button>
+
+        <p className="text-center text-xs text-muted-foreground">
           Não tem conta?{' '}
-          <Link href="/register" className="text-blue-600 hover:underline">
+          <Link href="/register" className="text-primary hover:underline">
             Cadastre-se
           </Link>
         </p>

@@ -6,8 +6,9 @@ import { LogOut } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { api } from '@/lib/api-client';
+import { cn } from '@/lib/utils';
 
-export function LogoutButton() {
+export function LogoutButton({ className }: { className?: string }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
 
@@ -16,10 +17,7 @@ export function LogoutButton() {
     setLoading(true);
 
     try {
-      await api<{ ok: true }>('/api/auth/logout', {
-        method: 'POST',
-      });
-
+      await api<{ ok: true }>('/api/auth/logout', { method: 'POST' });
       toast.success('Sessão encerrada');
       router.push('/login');
       router.refresh();
@@ -35,10 +33,13 @@ export function LogoutButton() {
       type="button"
       onClick={onClick}
       disabled={loading}
-      className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm text-slate-600 transition hover:bg-slate-100 hover:text-slate-900 disabled:opacity-60"
+      className={cn(
+        'flex w-full items-center gap-2.5 rounded-md px-2.5 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-sidebar-hover hover:text-sidebar-foreground disabled:opacity-60',
+        className,
+      )}
     >
-      <LogOut className="h-4 w-4" />
-      {loading ? 'Saindo…' : 'Sair'}
+      <LogOut className="h-3.5 w-3.5" />
+      <span>{loading ? 'Saindo…' : 'Sair'}</span>
     </button>
   );
 }

@@ -8,6 +8,9 @@ import Link from 'next/link';
 import { toast } from 'sonner';
 
 import { api } from '@/lib/api-client';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 const schema = z.object({
   name: z.string().min(2, 'Informe seu nome'),
@@ -51,86 +54,66 @@ export default function RegisterPage() {
   }
 
   return (
-    <main className="min-h-screen bg-slate-50 grid place-items-center px-4">
+    <main className="grid min-h-screen place-items-center bg-background px-4">
       <form
         onSubmit={handleSubmit(onSubmit)}
-        className="w-full max-w-sm space-y-5 rounded-xl border bg-white p-8 shadow-sm"
+        className="w-full max-w-sm space-y-6 rounded-lg border border-border bg-card p-8"
       >
         <div className="space-y-1">
-          <h1 className="text-2xl font-semibold text-slate-900">PulseOps</h1>
-          <p className="text-sm text-slate-500">Crie sua conta</p>
+          <h1 className="text-lg font-semibold text-foreground">PulseOps</h1>
+          <p className="text-sm text-muted-foreground">Crie sua conta</p>
         </div>
 
         <div className="space-y-2">
-          <label htmlFor="name" className="text-sm font-medium text-slate-700">
-            Nome
-          </label>
-          <input
-            id="name"
-            {...register('name')}
-            placeholder="Seu nome"
-            className="w-full rounded-md border px-3 py-2 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-          />
-          {errors.name && <p className="text-xs text-red-600">{errors.name.message}</p>}
+          <Label htmlFor="name">Nome</Label>
+          <Input id="name" placeholder="Seu nome" {...register('name')} />
+          {errors.name && <p className="text-xs text-destructive">{errors.name.message}</p>}
         </div>
 
         <div className="space-y-2">
-          <label htmlFor="organizationName" className="text-sm font-medium text-slate-700">
-            Organização
-          </label>
-          <input
+          <Label htmlFor="organizationName">Organização</Label>
+          <Input
             id="organizationName"
-            {...register('organizationName')}
             placeholder="Nome da empresa"
-            className="w-full rounded-md border px-3 py-2 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+            {...register('organizationName')}
           />
           {errors.organizationName && (
-            <p className="text-xs text-red-600">{errors.organizationName.message}</p>
+            <p className="text-xs text-destructive">{errors.organizationName.message}</p>
           )}
         </div>
 
         <div className="space-y-2">
-          <label htmlFor="email" className="text-sm font-medium text-slate-700">
-            E-mail
-          </label>
-          <input
+          <Label htmlFor="email">E-mail</Label>
+          <Input
             id="email"
             type="email"
             autoComplete="email"
-            {...register('email')}
             placeholder="voce@empresa.com"
-            className="w-full rounded-md border px-3 py-2 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+            {...register('email')}
           />
-          {errors.email && <p className="text-xs text-red-600">{errors.email.message}</p>}
+          {errors.email && <p className="text-xs text-destructive">{errors.email.message}</p>}
         </div>
 
         <div className="space-y-2">
-          <label htmlFor="password" className="text-sm font-medium text-slate-700">
-            Senha
-          </label>
-          <input
+          <Label htmlFor="password">Senha</Label>
+          <Input
             id="password"
             type="password"
             autoComplete="new-password"
-            {...register('password')}
             placeholder="••••••••"
-            className="w-full rounded-md border px-3 py-2 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+            {...register('password')}
           />
-          {errors.password && <p className="text-xs text-red-600">{errors.password.message}</p>}
+          {errors.password && <p className="text-xs text-destructive">{errors.password.message}</p>}
         </div>
 
-        <button
-          type="submit"
-          disabled={isSubmitting}
-          className="w-full rounded-md bg-blue-600 py-2.5 text-sm font-medium text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
-        >
-          {isSubmitting ? 'Criando…' : 'Criar conta'}
-        </button>
+        <Button type="submit" disabled={isSubmitting} className="w-full">
+          {isSubmitting ? 'Criando...' : 'Criar conta'}
+        </Button>
 
-        <p className="text-center text-xs text-slate-500">
+        <p className="text-center text-xs text-muted-foreground">
           Já tem conta?{' '}
-          <Link href="/login" className="text-blue-600 hover:underline">
-            Entrar
+          <Link href="/login" className="text-primary hover:underline">
+            Cadastre-se
           </Link>
         </p>
       </form>
