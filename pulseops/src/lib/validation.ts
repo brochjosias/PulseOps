@@ -40,3 +40,17 @@ export const productUpdateSchema = productCreateSchema.partial();
 
 export type ProductCreateInput = z.infer<typeof productCreateSchema>;
 export type ProductUpdateInput = z.infer<typeof productUpdateSchema>;
+
+export const orderListQuerySchema = paginationSchema.extend({
+  status: z.string().optional(),
+  from: z.string().optional(),
+  to: z.string().optional(),
+});
+
+export const customerCreateSchema = z.object({
+  name: z.string().min(2).max(120),
+  email: z.string().email().nullable().optional().or(z.literal('')),
+  document: z.string().max(40).nullable().optional().or(z.literal('')),
+});
+
+export const customerUpdateSchema = customerCreateSchema.partial();
