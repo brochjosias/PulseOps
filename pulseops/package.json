@@ -18,7 +18,8 @@
     "prisma:db:update": "prisma db update",
     "prisma:db:verify": "prisma db verify",
     "postinstall": "prisma skills sync || exit 0",
-    "db:seed": "tsx prisma/seed.ts"
+    "db:seed": "tsx prisma/seed.ts",
+    "db:seed:extend": "tsx prisma/seed-extend.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.9.1",
