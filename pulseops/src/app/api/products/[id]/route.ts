@@ -3,6 +3,9 @@ import { z } from 'zod';
 import { dbRuntime, prisma } from '@/lib/prisma';
 import { badRequest, conflict, notFound, ok, withSession } from '@/lib/http';
 import { productUpdateSchema } from '@/lib/validation';
+import { safeAudit } from '@/lib/audit';
+import { AUDIT } from '@/lib/audit-actions';
+import { requireRole } from '@/lib/rbac-guard';
 
 export const runtime = 'nodejs';
 
@@ -32,7 +35,7 @@ export async function GET(_: Request, ctx: { params: Promise<{ id: string }> }) 
 }
 
 export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }> }) {
-  const { session, error } = await withSession();
+  const { session, error } = await requireRole('MANAGER');
   if (error) return error;
 
   const { id } = paramsSchema.parse(await ctx.params);
@@ -67,11 +70,20 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
   await dbRuntime.execute(updatePlan);
 
   const updated = await loadProduct(id, session.organizationId);
+
+  await safeAudit({
+    organizationId: session.organizationId,
+    userId: session.userId,
+    action: AUDIT.PRODUCT_UPDATE,
+    entity: 'product',
+    entityId: String(id),
+    metadata: parsed.data,
+  });
   return ok(updated);
 }
 
 export async function DELETE(_: Request, ctx: { params: Promise<{ id: string }> }) {
-  const { session, error } = await withSession();
+  const { session, error } = await requireRole('MANAGER');
   if (error) return error;
 
   const { id } = paramsSchema.parse(await ctx.params);
@@ -85,6 +97,14 @@ export async function DELETE(_: Request, ctx: { params: Promise<{ id: string }> 
     .build();
 
   await dbRuntime.execute(plan);
+
+  await safeAudit({
+    organizationId: session.organizationId,
+    userId: session.userId,
+    action: AUDIT.PRODUCT_DEACTIVATE,
+    entity: 'product',
+    entityId: String(id),
+  });
 
   return ok({ ok: true });
 }

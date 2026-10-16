@@ -22,6 +22,14 @@ export async function api<T>(path: string, init?: RequestInit, retry = true): Pr
   if (!response.ok) {
     const body = await response.json().catch(() => ({}));
 
+    if (response.status === 403) {
+      throw new Error(body.message ?? 'Sem permissão para esta ação');
+    }
+
+    if (response.status >= 500) {
+      throw new Error(body.message ?? 'Erro interno do servidor');
+    }
+
     throw new Error(body.message ?? 'Erro na requisição');
   }
 

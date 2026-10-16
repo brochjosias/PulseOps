@@ -1,4 +1,5 @@
 import { randomInt } from 'node:crypto';
+
 import { dbRuntime, prisma } from './prisma';
 
 function generateId() {
@@ -28,4 +29,13 @@ export async function audit(params: {
     .build();
 
   await dbRuntime.execute(plan);
+}
+
+/** Igual a audit(), mas nunca propaga erro. Use em rotas de negócio. */
+export async function safeAudit(params: Parameters<typeof audit>[0]) {
+  try {
+    await audit(params);
+  } catch (err) {
+    console.error('[audit] falhou', err);
+  }
 }

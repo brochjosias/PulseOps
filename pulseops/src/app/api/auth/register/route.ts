@@ -4,6 +4,8 @@ import { randomInt } from 'node:crypto';
 
 import { dbRuntime, prisma } from '@/lib/prisma';
 import { createRefresh, hashPassword, setAuthCookies, signAccess } from '@/lib/auth';
+import { AUDIT } from '@/lib/audit-actions';
+import { safeAudit } from '@/lib/audit';
 
 export const runtime = 'nodejs';
 
@@ -118,6 +120,15 @@ export async function POST(req: Request) {
   const refresh = await createRefresh(user.id);
 
   await setAuthCookies(accessToken, refresh.raw, refresh.expiresAt);
+
+  await safeAudit({
+    organizationId: org.id,
+    userId: user.id,
+    action: AUDIT.AUTH_REGISTER,
+    entity: 'user',
+    entityId: String(user.id),
+    metadata: { email, organizationName: parsed.data.organizationName },
+  });
 
   return NextResponse.json({ ok: true }, { status: 201 });
 }

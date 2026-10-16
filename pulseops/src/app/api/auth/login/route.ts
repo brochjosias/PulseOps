@@ -3,6 +3,8 @@ import { z } from 'zod';
 
 import { dbRuntime, prisma } from '@/lib/prisma';
 import { createRefresh, setAuthCookies, signAccess, verifyPassword } from '@/lib/auth';
+import { safeAudit } from '@/lib/audit';
+import { AUDIT } from '@/lib/audit-actions';
 
 export const runtime = 'nodejs';
 
@@ -34,10 +36,28 @@ export async function POST(req: Request) {
     return NextResponse.json({ message: 'Credenciais inválidas' }, { status: 401 });
   }
 
+  // busca a membership para ter organizationId no audit
+  const memPlan = prisma.sql.membership
+    .select('organizationId')
+    .where((f, fns) => fns.eq(f.userId, user.id))
+    .limit(1)
+    .build();
+
+  const memRows = await dbRuntime.query(memPlan);
+  const organizationId = memRows[0]?.organizationId;
+
   const accessToken = await signAccess(user.id);
   const refresh = await createRefresh(user.id);
 
   await setAuthCookies(accessToken, refresh.raw, refresh.expiresAt);
+
+  await safeAudit({
+    userId: user.id,
+    organizationId,
+    action: AUDIT.AUTH_LOGIN,
+    entity: 'user',
+    entityId: String(user.id),
+  });
 
   return NextResponse.json({
     ok: true,

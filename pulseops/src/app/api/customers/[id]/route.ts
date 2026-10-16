@@ -3,6 +3,9 @@ import { z } from 'zod';
 import { dbRuntime, prisma } from '@/lib/prisma';
 import { badRequest, notFound, ok, withSession } from '@/lib/http';
 import { customerUpdateSchema } from '@/lib/validation';
+import { safeAudit } from '@/lib/audit';
+import { AUDIT } from '@/lib/audit-actions';
+import { requireRole } from '@/lib/rbac-guard';
 
 export const runtime = 'nodejs';
 
@@ -40,7 +43,7 @@ export async function GET(_: Request, ctx: { params: Promise<{ id: string }> }) 
 }
 
 export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }> }) {
-  const { session, error } = await withSession();
+  const { session, error } = await requireRole('ANALYST');
   if (error) return error;
 
   const { id } = paramsSchema.parse(await ctx.params);
@@ -65,5 +68,14 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
   await dbRuntime.execute(updatePlan);
 
   const updated = await loadCustomer(id, session.organizationId);
+
+  await safeAudit({
+    organizationId: session.organizationId,
+    userId: session.userId,
+    action: AUDIT.CUSTOMER_UPDATE,
+    entity: 'customer',
+    entityId: String(id),
+    metadata: parsed.data,
+  });
   return ok(updated);
 }

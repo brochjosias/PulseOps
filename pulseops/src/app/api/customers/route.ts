@@ -1,6 +1,9 @@
 import { dbRuntime, prisma } from '@/lib/prisma';
 import { badRequest, created, ok, withSession } from '@/lib/http';
 import { customerCreateSchema, paginationSchema } from '@/lib/validation';
+import { safeAudit } from '@/lib/audit';
+import { AUDIT } from '@/lib/audit-actions';
+import { requireRole } from '@/lib/rbac-guard';
 
 export const runtime = 'nodejs';
 
@@ -67,7 +70,7 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
-  const { session, error } = await withSession();
+  const { session, error } = await requireRole('ANALYST');
   if (error) return error;
 
   const body = await req.json().catch(() => null);
@@ -87,6 +90,15 @@ export async function POST(req: Request) {
     .build();
 
   const [customer] = await dbRuntime.query(insertPlan);
+
+  await safeAudit({
+    organizationId: session.organizationId,
+    userId: session.userId,
+    action: AUDIT.CUSTOMER_CREATE,
+    entity: 'customer',
+    entityId: String(customer.id),
+    metadata: { name: customer.name, email: customer.email },
+  });
 
   return created(customer);
 }
