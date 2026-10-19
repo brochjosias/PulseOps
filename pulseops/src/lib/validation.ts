@@ -54,3 +54,32 @@ export const customerCreateSchema = z.object({
 });
 
 export const customerUpdateSchema = customerCreateSchema.partial();
+
+export const profileUpdateSchema = z.object({
+  name: z.string().min(2).max(120),
+});
+
+export const passwordChangeSchema = z.object({
+  currentPassword: z.string().min(6),
+  newPassword: z.string().min(6).max(120),
+});
+
+export const organizationUpdateSchema = z.object({
+  name: z.string().min(2).max(120),
+  slug: z
+    .string()
+    .min(2)
+    .max(40)
+    .regex(/^[a-z0-9-]+$/, 'Apenas letras minúsculas, números e hífen'),
+});
+
+export const membershipCreateSchema = z.object({
+  email: z.string().email(),
+  name: z.string().min(2).max(120),
+  password: z.string().min(6).max(120),
+  role: z.enum(['VIEWER', 'ANALYST', 'MANAGER', 'ADMIN']),
+});
+
+export const membershipUpdateSchema = z.object({
+  role: z.enum(['VIEWER', 'ANALYST', 'MANAGER', 'ADMIN']),
+});
