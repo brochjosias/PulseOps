@@ -22,7 +22,8 @@ function toDateInput(d: Date) {
 export default function AnalyticsPage() {
   const defaults = useMemo(() => {
     const to = new Date();
-    const from = new Date(to.getTime() - 30 * 86_400_000);
+    // NOVO: Puxa 90 dias para trás por padrão
+    const from = new Date(to.getTime() - 90 * 86_400_000);
     return { from: toDateInput(from), to: toDateInput(to) };
   }, []);
 

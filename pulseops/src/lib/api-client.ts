@@ -20,17 +20,24 @@ export async function api<T>(path: string, init?: RequestInit, retry = true): Pr
   }
 
   if (!response.ok) {
+    // Tenta extrair a mensagem de erro do JSON de resposta
     const body = await response.json().catch(() => ({}));
+    let message = body.message;
 
-    if (response.status === 403) {
-      throw new Error(body.message ?? 'Sem permissão para esta ação');
+    // Fallbacks baseados no status HTTP
+    if (!message) {
+      if (response.status === 403) {
+        message = 'Você não tem permissão para realizar esta ação.';
+      } else if (response.status === 404) {
+        message = 'O recurso solicitado não foi encontrado.';
+      } else if (response.status >= 500) {
+        message = 'Erro interno no servidor. Tente novamente mais tarde.';
+      } else {
+        message = 'Ocorreu um erro ao processar a requisição.';
+      }
     }
 
-    if (response.status >= 500) {
-      throw new Error(body.message ?? 'Erro interno do servidor');
-    }
-
-    throw new Error(body.message ?? 'Erro na requisição');
+    throw new Error(message);
   }
 
   return response.json() as Promise<T>;

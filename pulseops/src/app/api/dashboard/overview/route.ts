@@ -16,11 +16,11 @@ export async function GET() {
 
   const now = new Date();
 
-  const start = new Date(now.getFullYear(), now.getMonth(), 1);
+  // ─── MUDANÇA: Últimos 90 dias ───
+  const start = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+  const prevStart = new Date(now.getTime() - 180 * 24 * 60 * 60 * 1000);
 
-  const prevStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-
-  // Pedidos do mês atual
+  // Pedidos do período atual (últimos 90 dias)
   const currentOrdersPlan = prisma.sql.order
     .select('id', 'total')
     .where((f, fns) =>
@@ -28,7 +28,7 @@ export async function GET() {
     )
     .build();
 
-  // Pedidos do mês anterior
+  // Pedidos do período anterior (90-180 dias atrás)
   const previousOrdersPlan = prisma.sql.order
     .select('id', 'total')
     .where((f, fns) =>
@@ -40,7 +40,6 @@ export async function GET() {
     )
     .build();
 
-  // Clientes da organização
   const customersPlan = prisma.sql.customer
     .select('id')
     .where((f, fns) => fns.eq(f.organizationId, organizationId))
@@ -59,7 +58,6 @@ export async function GET() {
   const orders = currentOrders.length;
   const previousOrderCount = previousOrders.length;
 
-  // Top produtos
   let topProducts: Array<{
     id: number;
     name: string;
@@ -106,17 +104,12 @@ export async function GET() {
   return NextResponse.json({
     revenue,
     revenueChange: previousRevenue ? ((revenue - previousRevenue) / previousRevenue) * 100 : 0,
-
     orders,
-
     ordersChange: previousOrderCount
       ? ((orders - previousOrderCount) / previousOrderCount) * 100
       : 0,
-
     avgTicket: orders ? revenue / orders : 0,
-
     customers: customers.length,
-
     topProducts,
   });
 }

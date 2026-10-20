@@ -1,12 +1,15 @@
 'use client';
 
 import dynamic from 'next/dynamic';
+import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
 import { DollarSign, ShoppingCart, TrendingUp, Users } from 'lucide-react';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { PageHeader } from '@/components/layout/page-header';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Button } from '@/components/ui/button';
+import { EmptyState } from '@/components/ui/empty-state';
 import { api } from '@/lib/api-client';
 import { brl } from '@/lib/utils';
 
@@ -43,7 +46,7 @@ export default function DashboardPage() {
 
   const series = useQuery<TimeseriesPoint[]>({
     queryKey: ['dashboard', 'timeseries', 30],
-    queryFn: () => api<TimeseriesPoint[]>('/api/dashboard/timeseries?days=30'),
+    queryFn: () => api<TimeseriesPoint[]>('/api/dashboard/timeseries?days=90'),
   });
 
   const loading = overview.isLoading || series.isLoading;
@@ -113,7 +116,24 @@ export default function DashboardPage() {
         </Card>
       )}
 
-      {!loading && !error && data && (
+      {!loading && !error && data && data.orders === 0 && (
+        <Card>
+          <CardContent className="p-12">
+            <EmptyState
+              icon={ShoppingCart}
+              title="Nenhum pedido no período"
+              description="Sua operação ainda não tem dados. Cadastre produtos e pedidos para ver os gráficos."
+              action={
+                <Button asChild>
+                  <Link href="/orders">Ir para Pedidos</Link>
+                </Button>
+              }
+            />
+          </CardContent>
+        </Card>
+      )}
+
+      {!loading && !error && data && data.orders > 0 && (
         <>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
             <KpiCard
