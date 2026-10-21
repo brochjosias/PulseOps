@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { Eye, Filter } from 'lucide-react';
+import { Eye, Filter, Download } from 'lucide-react';
+import { toast } from 'sonner';
 
 import { PageHeader } from '@/components/layout/page-header';
 import { Badge } from '@/components/ui/badge';
@@ -23,6 +24,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { useOrders } from '@/lib/api/orders';
+import { exportToCsv } from '@/lib/csv';
 import { brl } from '@/lib/utils';
 
 const STATUS_OPTIONS = [
@@ -62,9 +64,38 @@ export default function OrdersPage() {
     setPage(1);
   }
 
+  function handleExport() {
+    if (!data?.items || data.items.length === 0) {
+      toast.error('Nenhum pedido para exportar.');
+      return;
+    }
+
+    try {
+      exportToCsv(data.items, 'pedidos.csv', [
+        { key: 'id', label: 'ID' },
+        { key: 'placedAt', label: 'Data' },
+        { key: 'customerName', label: 'Cliente' },
+        { key: 'total', label: 'Total' },
+        { key: 'status', label: 'Status' },
+      ]);
+      toast.success('Exportação concluída!');
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Erro');
+    }
+  }
+
   return (
     <div className="space-y-6">
-      <PageHeader title="Pedidos" description="Histórico de pedidos da organização" />
+      <PageHeader
+        title="Pedidos"
+        description="Histórico de pedidos da organização"
+        actions={
+          <Button variant="outline" onClick={handleExport}>
+            <Download className="h-4 w-4 mr-2" />
+            Exportar
+          </Button>
+        }
+      />
 
       <Card>
         <CardContent className="p-0">

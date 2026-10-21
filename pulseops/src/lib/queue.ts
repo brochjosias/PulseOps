@@ -9,6 +9,7 @@ export type ImportJob = {
   organizationId: number;
   userId: number;
   filename: string;
+  entity: 'products' | 'customers'; // <-- Adicionado aqui
   status: 'queued' | 'processing' | 'done' | 'error';
   processed: number;
   inserted: number;

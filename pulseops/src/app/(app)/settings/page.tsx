@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Building2, ScrollText, UserCog, Users } from 'lucide-react';
+import { Building2, FileUp, ScrollText, UserCog, Users } from 'lucide-react';
 
 import { PageHeader } from '@/components/layout/page-header';
 import { Button } from '@/components/ui/button';
@@ -29,6 +29,12 @@ const sections = [
     label: 'Auditoria',
     description: 'Ações sensíveis registradas',
     icon: ScrollText,
+  },
+  {
+    href: '/settings/imports',
+    label: 'Histórico de Importação',
+    description: 'Status dos arquivos CSV enviados',
+    icon: FileUp,
   },
 ];
 

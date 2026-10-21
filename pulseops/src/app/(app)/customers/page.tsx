@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { Eye, Pencil, Plus } from 'lucide-react';
+import { Eye, Pencil, Plus, Download } from 'lucide-react';
+import { toast } from 'sonner';
 
 import { PageHeader } from '@/components/layout/page-header';
 import { Button } from '@/components/ui/button';
@@ -20,6 +21,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { useCustomers } from '@/lib/api/customers';
+import { exportToCsv } from '@/lib/csv';
 import { brl } from '@/lib/utils';
 
 export default function CustomersPage() {
@@ -28,18 +30,44 @@ export default function CustomersPage() {
 
   const { data, isLoading, isError } = useCustomers({ page, search });
 
+  function handleExport() {
+    if (!data?.items || data.items.length === 0) {
+      toast.error('Nenhum cliente para exportar.');
+      return;
+    }
+
+    try {
+      exportToCsv(data.items, 'clientes.csv', [
+        { key: 'name', label: 'Nome' },
+        { key: 'email', label: 'E-mail' },
+        { key: 'document', label: 'Documento' },
+        { key: 'ordersCount', label: 'Total de Pedidos' },
+        { key: 'totalSpent', label: 'Total Gasto' },
+      ]);
+      toast.success('Exportação concluída!');
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Erro');
+    }
+  }
+
   return (
     <div className="space-y-6">
       <PageHeader
         title="Clientes"
         description="Base de clientes da organização"
         actions={
-          <Button asChild>
-            <Link href="/customers/new">
-              <Plus />
-              Novo cliente
-            </Link>
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" onClick={handleExport}>
+              <Download className="h-4 w-4 mr-2" />
+              Exportar
+            </Button>
+            <Button asChild>
+              <Link href="/customers/new">
+                <Plus />
+                Novo cliente
+              </Link>
+            </Button>
+          </div>
         }
       />
 
