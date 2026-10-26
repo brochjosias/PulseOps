@@ -1,7 +1,46 @@
 @import 'tailwindcss';
 
 @theme {
-  /* Fundo / superfícies */
+  /* Fundo principal mais acinzentado para não ofuscar */
+  --color-background: hsl(220 15% 96%);
+  --color-foreground: hsl(222 47% 11%);
+
+  /* Cards ficam num tom de cinza ligeiramente mais claro (ou branco) para destacar */
+  --color-card: hsl(0 0% 100%);
+  --color-card-foreground: hsl(222 47% 11%);
+
+  /* Muted (fundo de inputs, hovers) um pouco mais escuro */
+  --color-muted: hsl(220 15% 90%);
+  --color-muted-foreground: hsl(215 16% 45%);
+
+  --color-border: hsl(214 32% 88%);
+  --color-input: hsl(214 32% 88%);
+  --color-ring: hsl(221 83% 53%);
+
+  --color-primary: hsl(221 83% 53%);
+  --color-primary-foreground: hsl(210 40% 98%);
+
+  --color-destructive: hsl(0 84% 60%);
+  --color-destructive-foreground: hsl(210 40% 98%);
+
+  --color-success: hsl(142 71% 45%);
+  --color-success-foreground: hsl(0 0% 100%);
+
+  --color-warning: hsl(38 92% 50%);
+  --color-warning-foreground: hsl(0 0% 4%);
+
+  /* Sidebar Light - também um tiquinho mais escura */
+  --color-sidebar: hsl(220 15% 93%);
+  --color-sidebar-foreground: hsl(240 5.3% 26.1%);
+  --color-sidebar-border: hsl(214 32% 88%);
+  --color-sidebar-hover: hsl(220 15% 88%);
+  --color-sidebar-active: hsl(220 15% 88%);
+
+  --radius: 0.5rem;
+}
+/* Sobrescreve para Dark Mode */
+/* Sobrescreve para Dark Mode */
+.dark {
   --color-background: hsl(0 0% 4%);
   --color-foreground: hsl(0 0% 98%);
 
@@ -13,13 +52,13 @@
 
   --color-border: hsl(0 0% 15%);
   --color-input: hsl(0 0% 15%);
+
+  /* Adicionado para o foco e feedbacks visuais ficarem vivos no escuro */
   --color-ring: hsl(217 91% 60%);
 
-  /* Primária (azul Vercel) */
   --color-primary: hsl(217 91% 60%);
   --color-primary-foreground: hsl(0 0% 100%);
 
-  /* Estados */
   --color-destructive: hsl(0 72% 51%);
   --color-destructive-foreground: hsl(0 0% 100%);
 
@@ -29,25 +68,22 @@
   --color-warning: hsl(38 92% 50%);
   --color-warning-foreground: hsl(0 0% 4%);
 
-  /* Sidebar */
   --color-sidebar: hsl(0 0% 6%);
   --color-sidebar-foreground: hsl(0 0% 90%);
   --color-sidebar-border: hsl(0 0% 14%);
   --color-sidebar-hover: hsl(0 0% 11%);
   --color-sidebar-active: hsl(0 0% 13%);
 
-  --radius: 0.5rem;
+  color-scheme: dark;
 }
 
 @layer base {
   * {
     border-color: var(--color-border);
   }
-
   html {
-    color-scheme: dark;
+    color-scheme: light;
   }
-
   body {
     background-color: var(--color-background);
     color: var(--color-foreground);
@@ -56,37 +92,33 @@
       'calt' 1;
   }
 
-  ::selection {
-    background-color: color-mix(in oklab, var(--color-primary) 35%, transparent);
-  }
-
-  /* ⬇️ NOVO — corrige o amarelo do autofill do Chrome */
+  /* Autofill fix para ambos os temas */
   input:-webkit-autofill,
   input:-webkit-autofill:hover,
   input:-webkit-autofill:focus,
   input:-webkit-autofill:active {
     -webkit-text-fill-color: var(--color-foreground);
     -webkit-box-shadow: 0 0 0 1000px var(--color-background) inset;
-    box-shadow: 0 0 0 1000px var(--color-background) inset;
     transition: background-color 9999s ease-in-out 0s;
-    caret-color: var(--color-foreground);
   }
 }
 
-@layer utilities {
-  .scrollbar-thin {
-    scrollbar-width: thin;
-    scrollbar-color: var(--color-border) transparent;
+/* ─── Animações de Transição de Página ─── */
+@keyframes page-enter {
+  0% {
+    opacity: 0;
+    transform: translateY(4px) scale(0.99);
+    filter: blur(4px);
   }
-  .scrollbar-thin::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: blur(0);
   }
-  .scrollbar-thin::-webkit-scrollbar-thumb {
-    background: var(--color-border);
-    border-radius: 4px;
-  }
-  .scrollbar-thin::-webkit-scrollbar-track {
-    background: transparent;
-  }
+}
+
+.animate-page-enter {
+  /* 0.4s com ease-out dá uma sensação de "freio" muito agradável */
+  animation: page-enter 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  will-change: transform, opacity, filter;
 }

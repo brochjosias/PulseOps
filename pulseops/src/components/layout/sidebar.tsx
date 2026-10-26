@@ -14,11 +14,7 @@ import {
 
 import { cn } from '@/lib/utils';
 
-type NavItem = {
-  href: string;
-  label: string;
-  icon: LucideIcon;
-};
+type NavItem = { href: string; label: string; icon: LucideIcon };
 
 const items: NavItem[] = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -29,11 +25,11 @@ const items: NavItem[] = [
   { href: '/settings', label: 'Configurações', icon: Settings },
 ];
 
-export function SidebarNav() {
+export function SidebarNav({ isMobile = false }: { isMobile?: boolean }) {
   const pathname = usePathname();
 
   return (
-    <nav className="flex-1 space-y-0.5 p-3">
+    <nav className="flex-1 space-y-1 p-2">
       {items.map(({ href, label, icon: Icon }) => {
         const active = pathname === href || pathname.startsWith(`${href}/`);
 
@@ -42,14 +38,25 @@ export function SidebarNav() {
             key={href}
             href={href}
             className={cn(
-              'flex items-center gap-2.5 rounded-md px-2.5 py-1.5 text-sm transition-colors',
+              'flex items-center gap-3 rounded-md px-2.5 py-2 text-sm transition-colors',
               active
                 ? 'bg-sidebar-active text-sidebar-foreground'
                 : 'text-muted-foreground hover:bg-sidebar-hover hover:text-sidebar-foreground',
             )}
           >
-            <Icon className="h-4 w-4" />
-            <span className="truncate">{label}</span>
+            <Icon className="h-5 w-5 shrink-0" />
+
+            {/* Lógica do texto: Se for mobile, mostra. Se for desktop, esconde até o hover */}
+            <span
+              className={cn(
+                'truncate transition-opacity',
+                isMobile
+                  ? 'block opacity-100'
+                  : 'hidden group-hover:block opacity-0 group-hover:opacity-100',
+              )}
+            >
+              {label}
+            </span>
           </Link>
         );
       })}
