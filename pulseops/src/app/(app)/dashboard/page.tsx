@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { api } from '@/lib/api-client';
 import { brl } from '@/lib/utils';
+import { useChartTheme } from '@/lib/chart-theme';
 
 const ReactECharts = dynamic(() => import('echarts-for-react'), { ssr: false });
 
@@ -55,29 +56,38 @@ export default function DashboardPage() {
   const data = overview.data;
   const chart = series.data ?? [];
 
+  const theme = useChartTheme();
+
   const chartOption = {
     backgroundColor: 'transparent',
     grid: { left: 8, right: 8, top: 8, bottom: 24, containLabel: true },
+
     tooltip: {
       trigger: 'axis',
-      backgroundColor: '#0a0a0a',
-      borderColor: '#27272a',
-      textStyle: { color: '#fafafa', fontSize: 12 },
+      ...theme.tooltip,
     },
+
     xAxis: {
       type: 'category' as const,
       data: chart.map((c) => c.day),
-      axisLine: { lineStyle: { color: '#27272a' } },
-      axisLabel: { color: '#71717a', fontSize: 11 },
+      axisLine: { lineStyle: { color: theme.border } },
+      axisLabel: { color: theme.text, fontSize: 11 },
       axisTick: { show: false },
     },
+
     yAxis: {
       type: 'value' as const,
       axisLine: { show: false },
       axisTick: { show: false },
-      splitLine: { lineStyle: { color: '#18181b' } },
-      axisLabel: { color: '#71717a', fontSize: 11 },
+      splitLine: {
+        lineStyle: {
+          color: theme.gridLine,
+          type: 'dashed',
+        },
+      },
+      axisLabel: { color: theme.text, fontSize: 11 },
     },
+
     series: [
       {
         type: 'line' as const,
