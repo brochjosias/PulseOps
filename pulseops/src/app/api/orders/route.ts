@@ -1,4 +1,4 @@
-import { dbRuntime, prisma } from '@/lib/prisma';
+import { prisma } from '@/lib/prisma';
 import { badRequest, ok, withSession } from '@/lib/http';
 import { orderListQuerySchema } from '@/lib/validation';
 
@@ -12,45 +12,36 @@ export async function GET(req: Request) {
   const parsed = orderListQuerySchema.safeParse(Object.fromEntries(url.searchParams));
   if (!parsed.success) return badRequest('Parâmetros inválidos', parsed.error.flatten());
 
-  const { page, pageSize, status, from, to } = parsed.data;
+  const { page, pageSize, status, from, to, search } = parsed.data;
 
-  // 1) Pedidos da org (com filtros de status e período)
   const fromDate = from ? new Date(from) : null;
   const toDate = to ? new Date(to) : null;
 
-  const ordersPlan = prisma.sql.order
-    .select('id', 'placedAt', 'total', 'status', 'customerId')
-    .where((f, fns) => {
-      const conditions = [fns.eq(f.organizationId, session.organizationId)];
-      if (status) conditions.push(fns.eq(f.status, status));
-      if (fromDate) conditions.push(fns.gte(f.placedAt, fromDate));
-      if (toDate) conditions.push(fns.lte(f.placedAt, toDate));
+  // 1) Traz do banco com os filtros iniciais
+  const allOrders = await prisma.order.findMany({
+    where: {
+      organizationId: session.organizationId,
+      ...(status ? { status } : {}),
+      ...(fromDate || toDate
+        ? {
+            placedAt: {
+              ...(fromDate ? { gte: fromDate } : {}),
+              ...(toDate ? { lte: toDate } : {}),
+            },
+          }
+        : {}),
+    },
+  });
 
-      if (conditions.length === 1) return conditions[0];
-      return fns.and(...conditions);
-    })
-    .orderBy('placedAt', { direction: 'desc' })
-    .build();
-
-  const allOrders = await dbRuntime.query(ordersPlan);
-
-  // 2) Nomes dos clientes envolvidos
   const customerIds = [...new Set(allOrders.map((o) => o.customerId))];
+  const customers = await prisma.customer.findMany({
+    where: { id: { in: customerIds } },
+    select: { id: true, name: true },
+  });
+  const customerMap = new Map(customers.map((c) => [c.id, c.name]));
 
-  const customerMap = new Map<number, string>();
-
-  if (customerIds.length > 0) {
-    const customersPlan = prisma.sql.customer
-      .select('id', 'name')
-      .where((f, fns) => fns.in(f.id, customerIds))
-      .build();
-
-    const customers = await dbRuntime.query(customersPlan);
-    for (const c of customers) customerMap.set(c.id, c.name);
-  }
-
-  // 3) Enriquece + filtro de busca (por nome de cliente) em memória
-  const enriched = allOrders.map((o) => ({
+  // 2) Enriquece com o nome do cliente
+  let enriched = allOrders.map((o) => ({
     id: o.id,
     placedAt: o.placedAt,
     total: o.total,
@@ -59,15 +50,18 @@ export async function GET(req: Request) {
     customerName: customerMap.get(o.customerId) ?? '—',
   }));
 
-  const search = parsed.data.search?.trim().toLowerCase();
-  const filtered = search
-    ? enriched.filter((o) => o.customerName.toLowerCase().includes(search))
-    : enriched;
+  // 3) Filtro de busca (se houver)
+  if (search) {
+    enriched = enriched.filter((o) => o.customerName.toLowerCase().includes(search.toLowerCase()));
+  }
 
-  // 4) Paginação
-  const total = filtered.length;
+  // 4) MÁGICA: Ordena do maior valor para o menor
+  enriched.sort((a, b) => b.total - a.total);
+
+  // 5) Paginação
+  const total = enriched.length;
   const start = (page - 1) * pageSize;
-  const items = filtered.slice(start, start + pageSize);
+  const items = enriched.slice(start, start + pageSize);
 
   return ok({
     items,

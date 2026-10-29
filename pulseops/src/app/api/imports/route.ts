@@ -1,11 +1,10 @@
 import { NextResponse } from 'next/server';
 import { randomUUID } from 'node:crypto';
 import Papa from 'papaparse';
-
 import { requireRole } from '@/lib/rbac-guard';
 import { withSession } from '@/lib/http';
 import { createJob, importQueue, updateJob, listJobs } from '@/lib/queue';
-import { dbRuntime, prisma } from '@/lib/prisma';
+import { prisma } from '@/lib/prisma';
 import { safeAudit } from '@/lib/audit';
 
 export const runtime = 'nodejs';
@@ -18,16 +17,14 @@ export async function POST(req: Request) {
   const file = formData.get('file') as File;
   const entity = formData.get('entity') as 'products' | 'customers';
 
-  if (!file || !entity) {
+  if (!file || !entity)
     return NextResponse.json({ message: 'Arquivo ou tipo ausente' }, { status: 400 });
-  }
 
   const text = await file.text();
   const parsed = Papa.parse(text, { header: true, skipEmptyLines: true });
 
-  if (parsed.errors.length > 0) {
+  if (parsed.errors.length > 0)
     return NextResponse.json({ message: 'Erro ao ler o CSV' }, { status: 400 });
-  }
 
   const job = createJob({
     id: randomUUID(),
@@ -47,53 +44,38 @@ export async function POST(req: Request) {
 
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i];
-
       try {
         if (entity === 'products') {
           if (!row.name || !row.sku || !row.price) throw new Error('Campos obrigatórios ausentes');
 
-          const check = prisma.sql.product
-            .select('id')
-            .where((f, fns) =>
-              fns.and(fns.eq(f.organizationId, session.organizationId), fns.eq(f.sku, row.sku)),
-            )
-            .limit(1)
-            .build();
+          const exists = await prisma.product.findFirst({
+            where: { organizationId: session.organizationId, sku: row.sku },
+          });
 
-          const exists = await dbRuntime.query(check);
-          if (exists.length > 0) {
+          if (exists) {
             skipped++;
           } else {
-            await dbRuntime.query(
-              prisma.sql.product
-                .insert([
-                  {
-                    organizationId: session.organizationId,
-                    name: row.name,
-                    sku: row.sku,
-                    price: Number(row.price),
-                    active: 1,
-                  },
-                ])
-                .build(),
-            );
+            await prisma.product.create({
+              data: {
+                organizationId: session.organizationId,
+                name: row.name,
+                sku: row.sku,
+                price: Number(row.price),
+                active: 1,
+              } as any,
+            });
             inserted++;
           }
         } else {
           if (!row.name) throw new Error('Nome é obrigatório');
-
-          await dbRuntime.query(
-            prisma.sql.customer
-              .insert([
-                {
-                  organizationId: session.organizationId,
-                  name: row.name,
-                  email: row.email || null,
-                  document: row.document || null,
-                },
-              ])
-              .build(),
-          );
+          await prisma.customer.create({
+            data: {
+              organizationId: session.organizationId,
+              name: row.name,
+              email: row.email || null,
+              document: row.document || null,
+            } as any, // <-- ADICIONE ISSO
+          });
           inserted++;
         }
       } catch (err) {
@@ -122,8 +104,5 @@ export async function POST(req: Request) {
 export async function GET() {
   const { session, error } = await withSession();
   if (error) return error;
-
-  const jobs = listJobs(session.organizationId);
-
-  return NextResponse.json(jobs);
+  return NextResponse.json(listJobs(session.organizationId));
 }

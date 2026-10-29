@@ -1,5 +1,6 @@
-import { dbRuntime, prisma } from '@/lib/prisma';
-import { badRequest, ok, withSession } from '@/lib/http';
+import { NextResponse } from 'next/server';
+import { getSession } from '@/lib/auth';
+import { prisma } from '@/lib/prisma';
 
 export const runtime = 'nodejs';
 
@@ -12,169 +13,122 @@ function parseDate(value: string | null, fallback: Date, isEnd = false): Date {
 }
 
 export async function GET(req: Request) {
-  const { session, error } = await withSession();
-  if (error) return error;
+  const session = await getSession();
+  if (!session?.organizationId) {
+    return NextResponse.json({ message: 'Sem organização' }, { status: 401 });
+  }
 
   const url = new URL(req.url);
-
-  // Pega a data de hoje no fuso local
   const now = new Date();
-
-  // Se a URL não tiver "to", usa o fim do dia de hoje
   const toFallback = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
-
-  // Se a URL não tiver "from", puxa 30 dias atrás
   const fromFallback = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 30, 0, 0, 0);
 
   const to = parseDate(url.searchParams.get('to'), toFallback, true);
   const from = parseDate(url.searchParams.get('from'), fromFallback, false);
 
-  if (from > to) return badRequest('Intervalo inválido');
-
   const organizationId = session.organizationId;
 
-  // ─── 1) Pedidos do período ────────────────────────────────────
-  const ordersPlan = prisma.sql.order
-    .select('id', 'total', 'channelId', 'regionId')
-    .where((f, fns) =>
-      fns.and(
-        fns.eq(f.organizationId, organizationId),
-        fns.gte(f.placedAt, from),
-        fns.lte(f.placedAt, to),
-      ),
-    )
-    .build();
+  // 1) Pedidos
+  const orders = await prisma.order.findMany({
+    where: { organizationId, placedAt: { gte: from, lte: to } },
+    select: { id: true, total: true, channelId: true, regionId: true },
+  });
 
-  const orders = await dbRuntime.query(ordersPlan);
-
-  // Se por algum motivo o banco estiver vazio ou os dados não baterem, vamos retornar vazio normal.
-  const totalRevenue = orders.reduce((s, o) => s + Number(o.total), 0);
+  const totalRevenue = orders.reduce((s, o) => s + o.total, 0);
   const totalOrders = orders.length;
   const orderIds = orders.map((o) => o.id);
 
-  // ─── 2) Itens desses pedidos ──────────────────────────────────
-  const itemsPlan = orderIds.length
-    ? prisma.sql.orderItem
-        .select('orderId', 'productId', 'subtotal')
-        .where((f, fns) => fns.in(f.orderId, orderIds))
-        .build()
-    : null;
+  // 2) Itens
+  const items = orderIds.length
+    ? await prisma.orderItem.findMany({
+        where: { orderId: { in: orderIds } },
+        select: { orderId: true, productId: true, subtotal: true },
+      })
+    : [];
 
-  const items = itemsPlan ? await dbRuntime.query(itemsPlan) : [];
-
-  // ─── 3) Categorias dos produtos ───────────────────────────────
+  // 3) Produtos e Categorias
   const productIds = [...new Set(items.map((it) => it.productId))];
-
-  const productsPlan = productIds.length
-    ? prisma.sql.product
-        .select('id', 'categoryId')
-        .where((f, fns) => fns.in(f.id, productIds))
-        .build()
-    : null;
-
-  const products = productsPlan ? await dbRuntime.query(productsPlan) : [];
+  const products = productIds.length
+    ? await prisma.product.findMany({
+        where: { id: { in: productIds } },
+        select: { id: true, categoryId: true },
+      })
+    : [];
 
   const productToCategory = new Map<number, number | null>();
   for (const p of products) productToCategory.set(p.id, p.categoryId);
 
-  // ─── 4) Metadados ─────────────────────────────────────────────
-  const catsPlan = prisma.sql.category
-    .select('id', 'name')
-    .where((f, fns) => fns.eq(f.organizationId, organizationId))
-    .build();
-  const channelsPlan = prisma.sql.salesChannel
-    .select('id', 'name')
-    .where((f, fns) => fns.eq(f.organizationId, organizationId))
-    .build();
-  const regionsPlan = prisma.sql.region
-    .select('id', 'name', 'uf')
-    .where((f, fns) => fns.eq(f.organizationId, organizationId))
-    .build();
+  // 4) Metadados
+  const categories = await prisma.category.findMany({ where: { organizationId } });
+  const channels = await prisma.salesChannel.findMany({ where: { organizationId } });
+  const regions = await prisma.region.findMany({ where: { organizationId } });
 
-  const [categories, channels, regions] = await Promise.all([
-    dbRuntime.query(catsPlan),
-    dbRuntime.query(channelsPlan),
-    dbRuntime.query(regionsPlan),
-  ]);
+  const catName = new Map<number, string>(categories.map((c) => [c.id, c.name]));
+  const channelName = new Map<number, string>(channels.map((c) => [c.id, c.name]));
+  const regionInfo = new Map<number, { name: string; uf: string | null }>(
+    regions.map((r) => [r.id, { name: r.name, uf: r.uf ?? null }]),
+  );
 
-  const catName = new Map<number, string>();
-  for (const c of categories) catName.set(c.id, c.name);
-
-  const channelName = new Map<number, string>();
-  for (const c of channels) channelName.set(c.id, c.name);
-
-  const regionInfo = new Map<number, { name: string; uf: string | null }>();
-  for (const r of regions) regionInfo.set(r.id, { name: r.name, uf: r.uf ?? null });
-
-  // ─── 5) Agregação por categoria ───────────────────────────────
+  // 5) Agregações
   const categoryMap = new Map<number | null, { revenue: number; orders: number }>();
   for (const it of items) {
     const categoryId = productToCategory.get(it.productId) ?? null;
     const cur = categoryMap.get(categoryId) ?? { revenue: 0, orders: 0 };
-    cur.revenue += Number(it.subtotal);
+    cur.revenue += it.subtotal;
     cur.orders += 1;
     categoryMap.set(categoryId, cur);
   }
 
-  const categoriesResult = [...categoryMap.entries()]
-    .map(([categoryId, v]) => ({
-      categoryId,
-      categoryName:
-        categoryId !== null ? (catName.get(categoryId) ?? 'Sem categoria') : 'Sem categoria',
-      revenue: v.revenue,
-      orders: v.orders,
-    }))
-    .sort((a, b) => b.revenue - a.revenue);
-
-  // ─── 6) Agregação por canal ───────────────────────────────────
   const channelMap = new Map<number | null, { revenue: number; orders: number }>();
   for (const o of orders) {
     const channelId = o.channelId ?? null;
     const cur = channelMap.get(channelId) ?? { revenue: 0, orders: 0 };
-    cur.revenue += Number(o.total);
+    cur.revenue += o.total;
     cur.orders += 1;
     channelMap.set(channelId, cur);
   }
 
-  const channelsResult = [...channelMap.entries()]
-    .map(([channelId, v]) => ({
-      channelId,
-      channelName: channelId !== null ? (channelName.get(channelId) ?? 'Sem canal') : 'Sem canal',
-      revenue: v.revenue,
-      orders: v.orders,
-    }))
-    .sort((a, b) => b.revenue - a.revenue);
-
-  // ─── 7) Agregação por região ──────────────────────────────────
   const regionMap = new Map<number | null, { revenue: number; orders: number }>();
   for (const o of orders) {
     const regionId = o.regionId ?? null;
     const cur = regionMap.get(regionId) ?? { revenue: 0, orders: 0 };
-    cur.revenue += Number(o.total);
+    cur.revenue += o.total;
     cur.orders += 1;
     regionMap.set(regionId, cur);
   }
 
-  const regionsResult = [...regionMap.entries()]
-    .map(([regionId, v]) => {
-      const info = regionId !== null ? regionInfo.get(regionId) : null;
-      return {
-        regionId,
-        regionName: info?.name ?? 'Sem região',
-        uf: info?.uf ?? null,
-        revenue: v.revenue,
-        orders: v.orders,
-      };
-    })
-    .sort((a, b) => b.revenue - a.revenue);
-
-  return ok({
+  return NextResponse.json({
     from: from.toISOString(),
     to: to.toISOString(),
     totalRevenue,
     totalOrders,
-    categories: categoriesResult,
-    channels: channelsResult,
-    regions: regionsResult,
+    categories: [...categoryMap.entries()]
+      .map(([categoryId, v]) => ({
+        categoryId,
+        categoryName: categoryId ? (catName.get(categoryId) ?? 'Sem categoria') : 'Sem categoria',
+        revenue: v.revenue,
+        orders: v.orders,
+      }))
+      .sort((a, b) => b.revenue - a.revenue),
+    channels: [...channelMap.entries()]
+      .map(([channelId, v]) => ({
+        channelId,
+        channelName: channelId ? (channelName.get(channelId) ?? 'Sem canal') : 'Sem canal',
+        revenue: v.revenue,
+        orders: v.orders,
+      }))
+      .sort((a, b) => b.revenue - a.revenue),
+    regions: [...regionMap.entries()]
+      .map(([regionId, v]) => {
+        const info = regionId ? regionInfo.get(regionId) : null;
+        return {
+          regionId,
+          regionName: info?.name ?? 'Sem região',
+          uf: info?.uf ?? null,
+          revenue: v.revenue,
+          orders: v.orders,
+        };
+      })
+      .sort((a, b) => b.revenue - a.revenue),
   });
 }

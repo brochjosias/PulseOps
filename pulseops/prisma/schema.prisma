@@ -1,0 +1,200 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Organization {
+  id        Int      @id
+  name      String
+  slug      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  memberships Membership[]
+  products    Product[]
+  categories  Category[]
+  customers   Customer[]
+  orders      Order[]
+  channels    SalesChannel[]
+  regions     Region[]
+  goals       Goal[]
+  alerts      Alert[]
+  reports     Report[]
+  auditLogs   AuditLog[]
+}
+
+model User {
+  id           Int      @id
+  email        String   @unique
+  name         String
+  passwordHash String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  memberships   Membership[]
+  refreshTokens RefreshToken[]
+  auditLogs     AuditLog[]
+}
+
+model Membership {
+  id             Int      @id
+  userId         Int
+  organizationId Int
+  role           String   @default("VIEWER")
+  createdAt      DateTime @default(now())
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  @@unique([userId, organizationId])
+  @@index([organizationId])
+}
+
+model RefreshToken {
+  id        Int      @id
+  userId    Int
+  tokenHash String   @unique
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime @default(now())
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@index([userId])
+}
+
+model Category {
+  id             Int      @id
+  organizationId Int
+  name           String
+  createdAt      DateTime @default(now())
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  products     Product[]
+  @@unique([organizationId, name])
+}
+
+model Product {
+  id             Int      @id
+  organizationId Int
+  categoryId     Int?
+  name           String
+  sku            String
+  price          Float
+  active         Int      @default(1)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  category     Category?    @relation(fields: [categoryId], references: [id])
+  orderItems   OrderItem[]
+  @@unique([organizationId, sku])
+  @@index([organizationId, active])
+}
+
+model Customer {
+  id             Int      @id
+  organizationId Int
+  name           String
+  email          String?
+  document       String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  orders       Order[]
+  @@index([organizationId])
+}
+
+model Region {
+  id             Int      @id
+  organizationId Int
+  name           String
+  uf             String?
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  orders       Order[]
+  @@unique([organizationId, name])
+}
+
+model SalesChannel {
+  id             Int    @id
+  organizationId Int
+  name           String
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  orders       Order[]
+  @@unique([organizationId, name])
+}
+
+model Order {
+  id             Int      @id
+  organizationId Int
+  customerId     Int
+  regionId       Int?
+  channelId      Int?
+  total          Float
+  status         String   @default("PAID")
+  placedAt       DateTime
+  createdAt      DateTime @default(now())
+  organization Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  customer     Customer      @relation(fields: [customerId], references: [id])
+  region       Region?       @relation(fields: [regionId], references: [id])
+  channel      SalesChannel? @relation(fields: [channelId], references: [id])
+  items        OrderItem[]
+  @@index([organizationId, placedAt])
+}
+
+model OrderItem {
+  id        Int   @id
+  orderId   Int
+  productId Int
+  quantity  Int
+  unitPrice Float
+  subtotal  Float
+  order   Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id])
+  @@index([orderId])
+  @@index([productId])
+}
+
+model Goal {
+  id             Int      @id
+  organizationId Int
+  metric         String
+  target         Float
+  periodStart    DateTime
+  periodEnd      DateTime
+  createdAt      DateTime @default(now())
+  organization Organization @relation(fields: [organizationId], references: [id])
+  @@index([organizationId, metric])
+}
+
+model Alert {
+  id             Int      @id
+  organizationId Int
+  type           String
+  severity       String   @default("INFO")
+  message        String
+  resolved       Int      @default(0)
+  createdAt      DateTime @default(now())
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  @@index([organizationId, resolved])
+}
+
+model Report {
+  id             Int      @id
+  organizationId Int
+  name           String
+  kind           String
+  payload        String
+  createdAt      DateTime @default(now())
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+}
+
+model AuditLog {
+  id             Int      @id
+  organizationId Int?
+  userId         Int?
+  action         String
+  entity         String?
+  entityId       String?
+  metadata       String?
+  createdAt      DateTime @default(now())
+  organization Organization? @relation(fields: [organizationId], references: [id])
+  user         User?         @relation(fields: [userId], references: [id])
+  @@index([organizationId, createdAt])
+}

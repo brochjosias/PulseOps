@@ -1,0 +1,184 @@
+{
+  "schemaVersion": "1",
+  "targetFamily": "sql",
+  "target": "postgresql",
+  "profileHash": "3916f444a8a17ad749191acf9e08dad97d1a327b88c2f1d45d12f240296aa8b2",
+  "storage": {
+    "namespaces": {
+      "public": {
+        "id": "public",
+        "entries": {
+          "table": {
+            "User": {
+              "columns": {
+                "id": { "codecId": "pg/int4@1", "nullable": false },
+                "email": { "codecId": "pg/text@1", "nullable": false },
+                "name": { "codecId": "pg/text@1", "nullable": false },
+                "passwordHash": { "codecId": "pg/text@1", "nullable": false },
+                "createdAt": { "codecId": "pg/timestamptz-string@1", "nullable": false },
+                "updatedAt": { "codecId": "pg/timestamptz-string@1", "nullable": false }
+              },
+              "primaryKey": { "columns": ["id"] }
+            },
+            "Organization": {
+              "columns": {
+                "id": { "codecId": "pg/int4@1", "nullable": false },
+                "name": { "codecId": "pg/text@1", "nullable": false },
+                "slug": { "codecId": "pg/text@1", "nullable": false },
+                "createdAt": { "codecId": "pg/timestamptz-string@1", "nullable": false },
+                "updatedAt": { "codecId": "pg/timestamptz-string@1", "nullable": false }
+              },
+              "primaryKey": { "columns": ["id"] }
+            },
+            "Membership": {
+              "columns": {
+                "id": { "codecId": "pg/int4@1", "nullable": false },
+                "userId": { "codecId": "pg/int4@1", "nullable": false },
+                "organizationId": { "codecId": "pg/int4@1", "nullable": false },
+                "role": { "codecId": "pg/text@1", "nullable": false },
+                "createdAt": { "codecId": "pg/timestamptz-string@1", "nullable": false }
+              },
+              "primaryKey": { "columns": ["id"] }
+            },
+            "RefreshToken": {
+              "columns": {
+                "id": { "codecId": "pg/int4@1", "nullable": false },
+                "userId": { "codecId": "pg/int4@1", "nullable": false },
+                "tokenHash": { "codecId": "pg/text@1", "nullable": false },
+                "expiresAt": { "codecId": "pg/timestamptz-string@1", "nullable": false },
+                "revokedAt": { "codecId": "pg/timestamptz-string@1", "nullable": true },
+                "createdAt": { "codecId": "pg/timestamptz-string@1", "nullable": false }
+              },
+              "primaryKey": { "columns": ["id"] }
+            },
+            "Product": {
+              "columns": {
+                "id": { "codecId": "pg/int4@1", "nullable": false },
+                "organizationId": { "codecId": "pg/int4@1", "nullable": false },
+                "categoryId": { "codecId": "pg/int4@1", "nullable": true },
+                "name": { "codecId": "pg/text@1", "nullable": false },
+                "sku": { "codecId": "pg/text@1", "nullable": false },
+                "price": { "codecId": "pg/float8@1", "nullable": false },
+                "active": { "codecId": "pg/int4@1", "nullable": false },
+                "createdAt": { "codecId": "pg/timestamptz-string@1", "nullable": false },
+                "updatedAt": { "codecId": "pg/timestamptz-string@1", "nullable": false }
+              },
+              "primaryKey": { "columns": ["id"] }
+            },
+            "Customer": {
+              "columns": {
+                "id": { "codecId": "pg/int4@1", "nullable": false },
+                "organizationId": { "codecId": "pg/int4@1", "nullable": false },
+                "name": { "codecId": "pg/text@1", "nullable": false },
+                "email": { "codecId": "pg/text@1", "nullable": true },
+                "document": { "codecId": "pg/text@1", "nullable": true },
+                "createdAt": { "codecId": "pg/timestamptz-string@1", "nullable": false },
+                "updatedAt": { "codecId": "pg/timestamptz-string@1", "nullable": false }
+              },
+              "primaryKey": { "columns": ["id"] }
+            },
+            "Order": {
+              "columns": {
+                "id": { "codecId": "pg/int4@1", "nullable": false },
+                "organizationId": { "codecId": "pg/int4@1", "nullable": false },
+                "customerId": { "codecId": "pg/int4@1", "nullable": false },
+                "regionId": { "codecId": "pg/int4@1", "nullable": true },
+                "channelId": { "codecId": "pg/int4@1", "nullable": true },
+                "total": { "codecId": "pg/float8@1", "nullable": false },
+                "status": { "codecId": "pg/text@1", "nullable": false },
+                "placedAt": { "codecId": "pg/timestamptz-string@1", "nullable": false },
+                "createdAt": { "codecId": "pg/timestamptz-string@1", "nullable": false }
+              },
+              "primaryKey": { "columns": ["id"] }
+            },
+            "OrderItem": {
+              "columns": {
+                "id": { "codecId": "pg/int4@1", "nullable": false },
+                "orderId": { "codecId": "pg/int4@1", "nullable": false },
+                "productId": { "codecId": "pg/int4@1", "nullable": false },
+                "quantity": { "codecId": "pg/int4@1", "nullable": false },
+                "unitPrice": { "codecId": "pg/float8@1", "nullable": false },
+                "subtotal": { "codecId": "pg/float8@1", "nullable": false }
+              },
+              "primaryKey": { "columns": ["id"] }
+            },
+            "AuditLog": {
+              "columns": {
+                "id": { "codecId": "pg/int4@1", "nullable": false },
+                "organizationId": { "codecId": "pg/int4@1", "nullable": true },
+                "userId": { "codecId": "pg/int4@1", "nullable": true },
+                "action": { "codecId": "pg/text@1", "nullable": false },
+                "entity": { "codecId": "pg/text@1", "nullable": true },
+                "entityId": { "codecId": "pg/text@1", "nullable": true },
+                "metadata": { "codecId": "pg/text@1", "nullable": true },
+                "createdAt": { "codecId": "pg/timestamptz-string@1", "nullable": false }
+              },
+              "primaryKey": { "columns": ["id"] }
+            },
+            "Category": {
+              "columns": {
+                "id": { "codecId": "pg/int4@1", "nullable": false },
+                "organizationId": { "codecId": "pg/int4@1", "nullable": false },
+                "name": { "codecId": "pg/text@1", "nullable": false },
+                "createdAt": { "codecId": "pg/timestamptz-string@1", "nullable": false }
+              },
+              "primaryKey": { "columns": ["id"] }
+            },
+            "Region": {
+              "columns": {
+                "id": { "codecId": "pg/int4@1", "nullable": false },
+                "organizationId": { "codecId": "pg/int4@1", "nullable": false },
+                "name": { "codecId": "pg/text@1", "nullable": false },
+                "uf": { "codecId": "pg/text@1", "nullable": true }
+              },
+              "primaryKey": { "columns": ["id"] }
+            },
+            "SalesChannel": {
+              "columns": {
+                "id": { "codecId": "pg/int4@1", "nullable": false },
+                "organizationId": { "codecId": "pg/int4@1", "nullable": false },
+                "name": { "codecId": "pg/text@1", "nullable": false }
+              },
+              "primaryKey": { "columns": ["id"] }
+            },
+            "Goal": {
+              "columns": {
+                "id": { "codecId": "pg/int4@1", "nullable": false },
+                "organizationId": { "codecId": "pg/int4@1", "nullable": false },
+                "metric": { "codecId": "pg/text@1", "nullable": false },
+                "target": { "codecId": "pg/float8@1", "nullable": false },
+                "periodStart": { "codecId": "pg/timestamptz-string@1", "nullable": false },
+                "periodEnd": { "codecId": "pg/timestamptz-string@1", "nullable": false },
+                "createdAt": { "codecId": "pg/timestamptz-string@1", "nullable": false }
+              },
+              "primaryKey": { "columns": ["id"] }
+            },
+            "Alert": {
+              "columns": {
+                "id": { "codecId": "pg/int4@1", "nullable": false },
+                "organizationId": { "codecId": "pg/int4@1", "nullable": false },
+                "type": { "codecId": "pg/text@1", "nullable": false },
+                "severity": { "codecId": "pg/text@1", "nullable": false },
+                "message": { "codecId": "pg/text@1", "nullable": false },
+                "resolved": { "codecId": "pg/int4@1", "nullable": false },
+                "createdAt": { "codecId": "pg/timestamptz-string@1", "nullable": false }
+              },
+              "primaryKey": { "columns": ["id"] }
+            },
+            "Report": {
+              "columns": {
+                "id": { "codecId": "pg/int4@1", "nullable": false },
+                "organizationId": { "codecId": "pg/int4@1", "nullable": false },
+                "name": { "codecId": "pg/text@1", "nullable": false },
+                "kind": { "codecId": "pg/text@1", "nullable": false },
+                "payload": { "codecId": "pg/text@1", "nullable": false },
+                "createdAt": { "codecId": "pg/timestamptz-string@1", "nullable": false }
+              },
+              "primaryKey": { "columns": ["id"] }
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
-
-import { dbRuntime, prisma } from '@/lib/prisma';
+import { prisma } from '@/lib/prisma';
 import { badRequest, conflict, created, ok, withSession } from '@/lib/http';
 import { requireRole } from '@/lib/rbac-guard';
 import { safeAudit } from '@/lib/audit';
@@ -19,24 +18,21 @@ export async function GET(req: Request) {
 
   const { page, pageSize, search } = parsed.data;
 
-  // 1) Traz todos da org
-  const allPlan = prisma.sql.product
-    .select('id', 'name', 'sku', 'price', 'active', 'createdAt', 'categoryId')
-    .where((f, fns) => fns.eq(f.organizationId, session.organizationId))
-    .orderBy('createdAt', { direction: 'desc' })
-    .build();
+  // 1) Traz do banco
+  const all = await prisma.product.findMany({
+    where: {
+      organizationId: session.organizationId,
+      ...(search ? { name: { contains: search, mode: 'insensitive' } } : {}),
+    },
+  });
 
-  const all = await dbRuntime.query(allPlan);
+  // 2) Ordena do mais caro para o mais barato
+  all.sort((a, b) => b.price - a.price);
 
-  // 2) Filtra em memória
-  const filtered = search
-    ? all.filter((p) => p.name.toLowerCase().includes(search.toLowerCase()))
-    : all;
-
-  // 3) Paginação em memória
-  const total = filtered.length;
+  // 3) Paginação
+  const total = all.length;
   const start = (page - 1) * pageSize;
-  const items = filtered.slice(start, start + pageSize);
+  const items = all.slice(start, start + pageSize);
 
   return ok({
     items,
@@ -55,23 +51,24 @@ export async function POST(req: Request) {
   const parsed = productCreateSchema.safeParse(body);
   if (!parsed.success) return badRequest('Dados inválidos', parsed.error.flatten());
 
-  const existsPlan = prisma.sql.product
-    .select('id')
-    .where((f, fns) =>
-      fns.and(fns.eq(f.organizationId, session.organizationId), fns.eq(f.sku, parsed.data.sku)),
-    )
-    .limit(1)
-    .build();
+  const exists = await prisma.product.findFirst({
+    where: {
+      organizationId: session.organizationId,
+      sku: parsed.data.sku,
+    },
+  });
+  if (exists) return conflict('SKU já cadastrado nesta organização');
 
-  const exists = await dbRuntime.query(existsPlan);
-  if (exists[0]) return conflict('SKU já cadastrado nesta organização');
-
-  const insertPlan = prisma.sql.product
-    .insert([{ ...parsed.data, organizationId: session.organizationId }])
-    .returning('id', 'name', 'sku', 'price', 'active')
-    .build();
-
-  const [product] = await dbRuntime.query(insertPlan);
+  const product = await prisma.product.create({
+    data: {
+      organizationId: session.organizationId,
+      name: parsed.data.name,
+      sku: parsed.data.sku,
+      price: parsed.data.price,
+      active: parsed.data.active ?? 1,
+      categoryId: parsed.data.categoryId ?? null,
+    } as any,
+  });
 
   await safeAudit({
     organizationId: session.organizationId,

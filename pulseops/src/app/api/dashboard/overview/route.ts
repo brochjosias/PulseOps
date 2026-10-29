@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 
 import { getSession } from '@/lib/auth';
-import { dbRuntime, prisma } from '@/lib/prisma';
+import { prisma } from '@/lib/prisma';
 
 export const runtime = 'nodejs';
 
@@ -15,88 +15,55 @@ export async function GET() {
   const organizationId = session.organizationId;
 
   const now = new Date();
-
-  // ─── MUDANÇA: Últimos 90 dias ───
   const start = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
   const prevStart = new Date(now.getTime() - 180 * 24 * 60 * 60 * 1000);
 
-  // Pedidos do período atual (últimos 90 dias)
-  const currentOrdersPlan = prisma.sql.order
-    .select('id', 'total')
-    .where((f, fns) =>
-      fns.and(fns.eq(f.organizationId, organizationId), fns.gte(f.placedAt, start)),
-    )
-    .build();
+  // Prisma 6: findMany e count
+  const currentOrders = await prisma.order.findMany({
+    where: { organizationId, placedAt: { gte: start } },
+    select: { id: true, total: true },
+  });
 
-  // Pedidos do período anterior (90-180 dias atrás)
-  const previousOrdersPlan = prisma.sql.order
-    .select('id', 'total')
-    .where((f, fns) =>
-      fns.and(
-        fns.eq(f.organizationId, organizationId),
-        fns.gte(f.placedAt, prevStart),
-        fns.lt(f.placedAt, start),
-      ),
-    )
-    .build();
+  const previousOrders = await prisma.order.findMany({
+    where: { organizationId, placedAt: { gte: prevStart, lt: start } },
+    select: { id: true, total: true },
+  });
 
-  const customersPlan = prisma.sql.customer
-    .select('id')
-    .where((f, fns) => fns.eq(f.organizationId, organizationId))
-    .build();
-
-  const [currentOrders, previousOrders, customers] = await Promise.all([
-    dbRuntime.query(currentOrdersPlan),
-    dbRuntime.query(previousOrdersPlan),
-    dbRuntime.query(customersPlan),
-  ]);
+  const customersCount = await prisma.customer.count({
+    where: { organizationId },
+  });
 
   const revenue = currentOrders.reduce((sum, order) => sum + order.total, 0);
-
   const previousRevenue = previousOrders.reduce((sum, order) => sum + order.total, 0);
-
   const orders = currentOrders.length;
   const previousOrderCount = previousOrders.length;
 
-  let topProducts: Array<{
-    id: number;
-    name: string;
-    quantity: number;
-    revenue: number;
-  }> = [];
-
+  let topProducts: Array<{ id: number; name: string; quantity: number; revenue: number }> = [];
   const orderIds = currentOrders.map((order) => order.id);
 
   if (orderIds.length > 0) {
-    const topPlan = prisma.sql.orderItem
-      .select('productId')
-      .select('quantity', (f, fns) => fns.sum(f.quantity))
-      .select('revenue', (f, fns) => fns.sum(f.subtotal))
-      .where((f, fns) => fns.in(f.orderId, orderIds))
-      .groupBy('productId')
-      .orderBy('revenue', {
-        direction: 'desc',
-      })
-      .limit(5)
-      .build();
-
-    const top = await dbRuntime.query(topPlan);
+    // Prisma 6: groupBy
+    const top = await prisma.orderItem.groupBy({
+      by: ['productId'],
+      where: { orderId: { in: orderIds } },
+      _sum: { quantity: true, subtotal: true },
+      orderBy: { _sum: { subtotal: 'desc' } },
+      take: 5,
+    });
 
     const productIds = top.map((item) => item.productId);
 
     if (productIds.length > 0) {
-      const productsPlan = prisma.sql.product
-        .select('id', 'name')
-        .where((f, fns) => fns.in(f.id, productIds))
-        .build();
-
-      const products = await dbRuntime.query(productsPlan);
+      const products = await prisma.product.findMany({
+        where: { id: { in: productIds } },
+        select: { id: true, name: true },
+      });
 
       topProducts = top.map((item) => ({
         id: item.productId,
-        name: products.find((product) => product.id === item.productId)?.name ?? '—',
-        quantity: Number(item.quantity ?? 0),
-        revenue: Number(item.revenue ?? 0),
+        name: products.find((p) => p.id === item.productId)?.name ?? '—',
+        quantity: Number(item._sum.quantity ?? 0),
+        revenue: Number(item._sum.subtotal ?? 0),
       }));
     }
   }
@@ -109,7 +76,7 @@ export async function GET() {
       ? ((orders - previousOrderCount) / previousOrderCount) * 100
       : 0,
     avgTicket: orders ? revenue / orders : 0,
-    customers: customers.length,
+    customers: customersCount,
     topProducts,
   });
 }

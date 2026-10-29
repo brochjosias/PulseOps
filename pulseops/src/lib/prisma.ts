@@ -1,10 +1,16 @@
-import sqlite from '@prisma/orm-sqlite/runtime';
-import type { Contract } from '../../prisma/contract.d';
-import contractJson from '../../prisma/contract.json' with { type: 'json' };
+import { PrismaClient } from '@prisma/client';
 
-export const prisma = sqlite<Contract>({
-  contractJson,
-  path: './prisma/dev.db',
-});
+const globalForPrisma = globalThis as unknown as { prisma: PrismaClient };
 
-export const dbRuntime = prisma.runtime();
+export const prisma =
+  globalForPrisma.prisma ||
+  new PrismaClient({
+    datasources: {
+      db: { url: process.env.DATABASE_URL },
+    },
+  });
+
+if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;
+
+// Alias para não quebrar os arquivos antigos que importam 'dbRuntime'
+export const dbRuntime = prisma;

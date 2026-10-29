@@ -1,10 +1,4 @@
-import { randomInt } from 'node:crypto';
-
-import { dbRuntime, prisma } from './prisma';
-
-function generateId() {
-  return randomInt(1, 2_147_483_647);
-}
+import { prisma } from './prisma';
 
 export async function audit(params: {
   organizationId?: number;
@@ -14,24 +8,18 @@ export async function audit(params: {
   entityId?: string;
   metadata?: Record<string, unknown>;
 }) {
-  const plan = prisma.sql.auditLog
-    .insert([
-      {
-        id: generateId(),
-        organizationId: params.organizationId,
-        userId: params.userId,
-        action: params.action,
-        entity: params.entity,
-        entityId: params.entityId,
-        metadata: params.metadata ? JSON.stringify(params.metadata) : undefined,
-      },
-    ])
-    .build();
-
-  await dbRuntime.execute(plan);
+  await prisma.auditLog.create({
+    data: {
+      organizationId: params.organizationId,
+      userId: params.userId,
+      action: params.action,
+      entity: params.entity,
+      entityId: params.entityId,
+      metadata: params.metadata ? JSON.stringify(params.metadata) : undefined,
+    } as any, // <-- ADICIONE ISSO
+  });
 }
 
-/** Igual a audit(), mas nunca propaga erro. Use em rotas de negócio. */
 export async function safeAudit(params: Parameters<typeof audit>[0]) {
   try {
     await audit(params);

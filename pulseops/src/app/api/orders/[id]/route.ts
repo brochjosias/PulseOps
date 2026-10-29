@@ -1,58 +1,35 @@
 import { z } from 'zod';
-
-import { dbRuntime, prisma } from '@/lib/prisma';
+import { prisma } from '@/lib/prisma';
 import { notFound, ok, withSession } from '@/lib/http';
 
 export const runtime = 'nodejs';
-
 const paramsSchema = z.object({ id: z.coerce.number().int().positive() });
 
 export async function GET(_: Request, ctx: { params: Promise<{ id: string }> }) {
   const { session, error } = await withSession();
   if (error) return error;
-
   const { id } = paramsSchema.parse(await ctx.params);
 
-  // Order
-  const orderPlan = prisma.sql.order
-    .select('id', 'placedAt', 'total', 'status', 'customerId')
-    .where((f, fns) => fns.and(fns.eq(f.id, id), fns.eq(f.organizationId, session.organizationId)))
-    .limit(1)
-    .build();
-
-  const [order] = await dbRuntime.query(orderPlan);
+  const order = await prisma.order.findFirst({
+    where: { id, organizationId: session.organizationId },
+  });
   if (!order) return notFound('Pedido não encontrado');
 
-  // Customer
-  const customerPlan = prisma.sql.customer
-    .select('id', 'name', 'email')
-    .where((f, fns) => fns.eq(f.id, order.customerId))
-    .limit(1)
-    .build();
+  const customer = await prisma.customer.findUnique({
+    where: { id: order.customerId },
+    select: { id: true, name: true, email: true },
+  });
 
-  const [customer] = await dbRuntime.query(customerPlan);
+  const items = await prisma.orderItem.findMany({
+    where: { orderId: id },
+  });
 
-  // Items
-  const itemsPlan = prisma.sql.orderItem
-    .select('id', 'productId', 'quantity', 'unitPrice', 'subtotal')
-    .where((f, fns) => fns.eq(f.orderId, id))
-    .build();
-
-  const items = await dbRuntime.query(itemsPlan);
-
-  // Nomes dos produtos
   const productIds = [...new Set(items.map((it) => it.productId))];
-  const productMap = new Map<number, string>();
-
-  if (productIds.length > 0) {
-    const productsPlan = prisma.sql.product
-      .select('id', 'name')
-      .where((f, fns) => fns.in(f.id, productIds))
-      .build();
-
-    const products = await dbRuntime.query(productsPlan);
-    for (const p of products) productMap.set(p.id, p.name);
-  }
+  const products = await prisma.product.findMany({
+    where: { id: { in: productIds } },
+    select: { id: true, name: true },
+  });
+  const productMap = new Map(products.map((p) => [p.id, p.name]));
 
   return ok({
     id: order.id,
