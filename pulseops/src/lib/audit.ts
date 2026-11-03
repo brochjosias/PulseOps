@@ -1,4 +1,9 @@
 import { prisma } from './prisma';
+import { randomInt } from 'node:crypto';
+
+function generateId() {
+  return randomInt(1, 2_147_483_647);
+}
 
 export async function audit(params: {
   organizationId?: number;
@@ -10,13 +15,14 @@ export async function audit(params: {
 }) {
   await prisma.auditLog.create({
     data: {
+      id: generateId(), // <-- AQUI ESTÁ A CORREÇÃO
       organizationId: params.organizationId,
       userId: params.userId,
       action: params.action,
       entity: params.entity,
       entityId: params.entityId,
       metadata: params.metadata ? JSON.stringify(params.metadata) : undefined,
-    } as any, // <-- ADICIONE ISSO
+    } as any,
   });
 }
 

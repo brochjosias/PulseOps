@@ -17,6 +17,7 @@ function getAccessSecret() {
 const PUBLIC_PATHS = ['/login', '/register'];
 
 const PUBLIC_API = [
+  '/api/auth',
   '/api/auth/login',
   '/api/auth/register',
   '/api/auth/refresh',
