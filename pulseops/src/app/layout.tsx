@@ -16,13 +16,38 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL('https://pulse-ops-oinq.vercel.app'),
+
   title: 'PulseOps',
   description: 'Plataforma de gestão e análise operacional',
+
+  openGraph: {
+    title: 'PulseOps',
+    description: 'Plataforma de gestão e análise operacional',
+    url: 'https://pulse-ops-oinq.vercel.app',
+    siteName: 'PulseOps',
+    images: [
+      {
+        url: '/og-image-pulseops.png',
+        width: 1200,
+        height: 630,
+        alt: 'PulseOps',
+      },
+    ],
+    locale: 'pt_BR',
+    type: 'website',
+  },
+
+  twitter: {
+    card: 'summary_large_image',
+    title: 'PulseOps',
+    description: 'Plataforma de gestão e análise operacional',
+    images: ['/og-image-pulseops.png'],
+  },
 };
 
 export default function RootLayout({ children }: LayoutProps<'/'>) {
   return (
-    // Adicione suppressHydrationWarning aqui:
     <html
       lang="pt-BR"
       suppressHydrationWarning
