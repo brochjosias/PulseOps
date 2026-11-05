@@ -51,14 +51,19 @@ export async function POST(req: Request) {
     Se o usuário perguntar algo que você não tem o dado exato, diga que ainda não tem acesso a essa métrica específica, mas tente ajudá-lo com o que você sabe do sistema.
   `;
 
-  // Lista de modelos para tentar (do mais capaz para o mais leve)
+  // Mantivemos a sua ordem de preferência
   const modelsToTry = ['gemini-3.8-flash', 'gemini-3.5-flash-lite', 'gemini-3.1-flash-lite'];
 
   let reply = 'Desculpe, estou com muita demanda agora. Tente novamente em alguns instantes.';
 
   for (const modelName of modelsToTry) {
     try {
-      const response = await ai.models.generateContent({
+      // Cria uma promessa que "explode" se demorar mais de 10 segundos
+      const timeoutPromise = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('Timeout')), 10000),
+      );
+
+      const fetchPromise = ai.models.generateContent({
         model: modelName,
         contents: [
           { role: 'user', parts: [{ text: contexto + '\n\nPergunta do usuário: ' + message }] },
@@ -69,13 +74,16 @@ export async function POST(req: Request) {
         },
       });
 
-      if (response.text) {
+      // Corrida: quem terminar primeiro (a resposta ou o timeout) vence
+      const response: any = await Promise.race([fetchPromise, timeoutPromise]);
+
+      if (response?.text) {
         reply = response.text;
         break; // Se deu certo, para o loop e usa essa resposta
       }
     } catch (error: any) {
-      // Se for erro 503, tenta o próximo modelo. Se for outro erro, loga e continua.
-      console.error(`Erro no modelo ${modelName}:`, error?.message || error);
+      // Se der erro (inclusive o erro de Timeout), cai no catch e tenta o próximo modelo
+      console.error(`Erro/Timeout no modelo ${modelName}:`, error?.message || error);
     }
   }
 

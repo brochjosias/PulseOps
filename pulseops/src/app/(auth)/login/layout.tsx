@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://pulse-ops-oinq.vercel.app'),
+  metadataBase: new URL('https://pulse-ops-ashen.vercel.app'),
   title: 'PulseOps | Login',
   description:
     'Plataforma completa de gestão e análise operacional. Controle seus pedidos, clientes, produtos e acompanhe o faturamento com dashboards inteligentes.',
@@ -9,7 +9,7 @@ export const metadata: Metadata = {
     title: 'PulseOps | Login',
     description:
       'Plataforma completa de gestão e análise operacional. Controle seus pedidos, clientes, produtos e acompanhe o faturamento com dashboards inteligentes.',
-    url: 'https://pulse-ops-oinq.vercel.app/login',
+    url: 'https://pulse-ops-ashen.vercel.app/login',
     siteName: 'PulseOps',
     images: [
       {

@@ -16,7 +16,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://pulse-ops-oinq.vercel.app'),
+  metadataBase: new URL('https://pulse-ops-ashen.vercel.app'),
 
   title: 'PulseOps',
   description: 'Plataforma de gestão e análise operacional',
@@ -24,7 +24,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: 'PulseOps',
     description: 'Plataforma de gestão e análise operacional',
-    url: 'https://pulse-ops-oinq.vercel.app',
+    url: 'https://pulse-ops-ashen.vercel.app',
     siteName: 'PulseOps',
     images: [
       {
