@@ -6,6 +6,7 @@ import { LogoutButton } from '@/components/logout-button';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { getSession } from '@/lib/auth';
 import { PageTransition } from '@/components/layout/page-transition';
+import { AiChat } from '@/components/ai-chat'; // <-- IMPORT AQUI
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const session = await getSession();
@@ -18,7 +19,6 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     <div className="flex min-h-screen bg-background text-foreground overflow-hidden">
       {/* ─── Sidebar (Desktop) - Retrátil no Hover ─── */}
       <aside className="group fixed inset-y-0 left-0 z-40 hidden w-16 flex-col border-r border-sidebar-border bg-sidebar transition-all duration-500 ease-in-out hover:w-60 md:flex">
-        {' '}
         {/* Logo */}
         <div className="flex h-14 shrink-0 items-center border-b border-sidebar-border px-4">
           <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-primary text-[11px] font-bold text-primary-foreground">
@@ -28,8 +28,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             PulseOps
           </span>
         </div>
+
         {/* Links de Navegação */}
         <SidebarNav />
+
         {/* Rodapé (Perfil + Logout) */}
         <div className="mt-auto border-t border-sidebar-border p-3">
           <div className="mb-2 flex items-center gap-2.5 rounded-md px-1 py-1">
@@ -66,11 +68,13 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         {/* Conteúdo das páginas */}
         <main className="flex-1 overflow-y-auto">
           <div className="mx-auto w-full max-w-7xl px-4 py-6 md:px-8 md:py-8">
-            {/* Envolva o children aqui */}
             <PageTransition>{children}</PageTransition>
           </div>
         </main>
       </div>
+
+      {/* Agente de IA - Fica flutuando na tela inteira */}
+      <AiChat />
     </div>
   );
 }
