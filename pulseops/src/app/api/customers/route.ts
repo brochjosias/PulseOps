@@ -4,6 +4,7 @@ import { requireRole } from '@/lib/rbac-guard';
 import { safeAudit } from '@/lib/audit';
 import { AUDIT } from '@/lib/audit-actions';
 import { customerCreateSchema, paginationSchema } from '@/lib/validation';
+import { randomInt } from 'crypto';
 
 export const runtime = 'nodejs';
 
@@ -76,6 +77,7 @@ export async function POST(req: Request) {
 
   const customer = await prisma.customer.create({
     data: {
+      id: randomInt(1, 2_147_483_647), // <-- A CORREÇÃO AQUI
       organizationId: session.organizationId,
       name: parsed.data.name,
       email: parsed.data.email || null,

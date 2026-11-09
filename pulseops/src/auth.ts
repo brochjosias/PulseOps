@@ -2,6 +2,7 @@ import GoogleProvider from 'next-auth/providers/google';
 import type { NextAuthOptions } from 'next-auth';
 import { prisma } from '@/lib/prisma';
 import { randomInt } from 'node:crypto';
+import { generateOnboardingData } from '@/lib/onboarding'; // <-- IMPORT DO ONBOARDING
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -17,7 +18,9 @@ export const authOptions: NextAuthOptions = {
       try {
         if (user.email) {
           const existing = await prisma.user.findFirst({ where: { email: user.email } });
+
           if (!existing) {
+            // 1. Cria a Organização
             const org = await prisma.organization.create({
               data: {
                 id: randomInt(1, 2_147_483_647),
@@ -25,6 +28,8 @@ export const authOptions: NextAuthOptions = {
                 slug: user.email.split('@')[0] + '-' + randomInt(1000, 9999),
               },
             });
+
+            // 2. Cria o Usuário
             const newUser = await prisma.user.create({
               data: {
                 id: randomInt(1, 2_147_483_647),
@@ -33,6 +38,8 @@ export const authOptions: NextAuthOptions = {
                 passwordHash: 'OAUTH_GOOGLE',
               },
             });
+
+            // 3. Cria o Vínculo (Membership)
             await prisma.membership.create({
               data: {
                 id: randomInt(1, 2_147_483_647),
@@ -41,6 +48,9 @@ export const authOptions: NextAuthOptions = {
                 role: 'ADMIN',
               },
             });
+
+            // 4. Gera os dados iniciais (Produtos, Clientes, Pedidos)
+            await generateOnboardingData(org.id);
           }
         }
         return true;
@@ -49,9 +59,9 @@ export const authOptions: NextAuthOptions = {
         return false;
       }
     },
+
     async redirect({ url, baseUrl }) {
-      // Se o NextAuth tentar redirecionar para a baseUrl ou para o dashboard,
-      // nós o forçamos a ir para a nossa rota intermediária.
+      // Força o redirecionamento para a nossa rota intermediária que gera os cookies
       return `${baseUrl}/api/auth/google-callback`;
     },
   },

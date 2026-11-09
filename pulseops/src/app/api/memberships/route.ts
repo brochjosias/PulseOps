@@ -7,6 +7,8 @@ import { hashPassword } from '@/lib/auth';
 import { membershipCreateSchema } from '@/lib/validation';
 
 export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+
 function generateId() {
   return randomInt(1, 2_147_483_647);
 }
@@ -58,19 +60,25 @@ export async function POST(req: Request) {
   }
 
   let userId: number;
+
   if (existingUser) {
     userId = existingUser.id;
   } else {
     const passwordHash = await hashPassword(parsed.data.password);
     const user = await prisma.user.create({
-      data: { id: generateId(), email, name: parsed.data.name, passwordHash },
+      data: {
+        id: generateId(), // <-- ID GERADO AQUI PARA O USUÁRIO
+        email,
+        name: parsed.data.name,
+        passwordHash,
+      },
     });
     userId = user.id;
   }
 
   const mem = await prisma.membership.create({
     data: {
-      id: generateId(),
+      id: generateId(), // <-- ID GERADO AQUI PARA O MEMBERSHIP
       userId,
       organizationId: session.organizationId,
       role: parsed.data.role,

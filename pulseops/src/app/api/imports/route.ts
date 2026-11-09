@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { randomUUID } from 'node:crypto';
+import { randomUUID, randomInt } from 'node:crypto'; // <-- randomInt importado
 import Papa from 'papaparse';
 import { requireRole } from '@/lib/rbac-guard';
 import { withSession } from '@/lib/http';
@@ -8,6 +8,7 @@ import { prisma } from '@/lib/prisma';
 import { safeAudit } from '@/lib/audit';
 
 export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 
 export async function POST(req: Request) {
   const { session, error } = await requireRole('MANAGER');
@@ -57,6 +58,7 @@ export async function POST(req: Request) {
           } else {
             await prisma.product.create({
               data: {
+                id: randomInt(1, 2_147_483_647), // <-- ID GERADO AQUI
                 organizationId: session.organizationId,
                 name: row.name,
                 sku: row.sku,
@@ -70,11 +72,12 @@ export async function POST(req: Request) {
           if (!row.name) throw new Error('Nome é obrigatório');
           await prisma.customer.create({
             data: {
+              id: randomInt(1, 2_147_483_647), // <-- ID GERADO AQUI
               organizationId: session.organizationId,
               name: row.name,
               email: row.email || null,
               document: row.document || null,
-            } as any, // <-- ADICIONE ISSO
+            } as any,
           });
           inserted++;
         }

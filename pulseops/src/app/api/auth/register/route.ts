@@ -5,6 +5,7 @@ import { createRefresh, hashPassword, setAuthCookies, signAccess } from '@/lib/a
 import { safeAudit } from '@/lib/audit';
 import { AUDIT } from '@/lib/audit-actions';
 import { randomInt } from 'node:crypto';
+import { generateOnboardingData } from '@/lib/onboarding';
 
 export const runtime = 'nodejs';
 
@@ -56,6 +57,8 @@ export async function POST(req: Request) {
   await prisma.membership.create({
     data: { id: generateId(), userId: user.id, organizationId: org.id, role: 'ADMIN' },
   });
+
+  generateOnboardingData(org.id);
 
   await safeAudit({
     organizationId: org.id,
