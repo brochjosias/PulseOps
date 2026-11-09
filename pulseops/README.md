@@ -1,4 +1,4 @@
-# 🚀 PulseOps — Plataforma de Gestão e Análise Operacional
+# 🚀 PulseOps - Plataforma de Gestão e Análise Operacional
 
 O **PulseOps** é uma plataforma SaaS para gestão de negócios, desenvolvida para centralizar operações e facilitar a tomada de decisões. Permite gerenciar pedidos, clientes e produtos, acompanhar indicadores de faturamento e utilizar um Agente de Inteligência Artificial integrado para analisar os dados da empresa.
 
@@ -98,9 +98,9 @@ http://localhost:3000
 
 O ambiente de demonstração possui dados populados e duas contas disponíveis para testar diferentes níveis de acesso.
 
-### Administrador — Acesso Total
+### Administrador - Acesso Total
 
-### Visitante — Somente Leitura
+### Visitante - Somente Leitura
 
 | Campo  | Credencial               |
 | ------ | ------------------------ |
@@ -111,6 +111,6 @@ O ambiente de demonstração possui dados populados e duas contas disponíveis p
 
 ---
 
-**PulseOps** — Gestão operacional, análise de dados e inteligência artificial em uma única plataforma.
+**PulseOps** - Gestão operacional, análise de dados e inteligência artificial em uma única plataforma.
 
 > **Segurança:** As credenciais acima são destinadas exclusivamente à demonstração. Não utilize essas senhas em ambientes de produção.
